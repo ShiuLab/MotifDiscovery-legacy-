@@ -2,11 +2,19 @@
 
 FUNCTIONS (-f):
 
-make_pairs :=  		Make a file with all possible kmer pairs. For 6mers, should have 8,386,560 pairs. Need: -k
-make_df    := 	 	Make a table with presence or absense of all kmers/kmer pairs for positive and negative genes. 
-			  		Works as input for RandomForest in R. Need: -kmers, -p (fasta files), -n (fasta file), -ds, -out. 
-			  			If no DNA Structure "-ds no"
-
+make_pairs 	:=  	Make a file with all possible kmer pairs. For 6mers, should have 8,386,560 pairs.
+						Need: -k
+make_df    	:= 	 	Make a table with presence or absense of all kmers/kmer pairs for positive and negative genes. 
+			  		Works as input for RandomForest in R.
+			  			Need: -kmers, -p (fasta files), -n (fasta file), -ds, -out. 
+			  				*If no DNA Structure "-ds no"
+parse2		:=		Parse table based on enrichment using Fishers Exact Test, default p value is 0.05. Uses df with both pos and neg
+					examples as the imput. 
+						Need: -df
+						Optional: -pval (Default = 0.05)
+parse		:=		Old implementation of parse2, based on when there were separate df for the pos and neg examples.
+						Need: -p, -n
+						Optional: -pval (Default = 0.05)
 
 PARAMETERS AVAILABLE:
 
@@ -53,6 +61,8 @@ class Kmer_pairs:
 		out = open(kmers+"_pairs.txt",'w')
 		for p in pairs:
 			out.write("\n"+p)
+
+
 
 	def make_df(self, kmers, pos, neg, ds):
 		"""Make a table with presence or absense of all kmers/kmer pairs for 
@@ -165,6 +175,9 @@ class Kmer_pairs:
 			out.write("\n"+alli +"\t"+ "\t".join(allgenes[alli]))
 		print("Done! # genes:" + str(len(allgenes)))
 
+
+
+
 	def parse(self, pos, neg, pval):
 		"""Parse table based on enrichment using Fishers Exact Test, default p value is 0.05"""
 		n = pos[:-4]
@@ -218,7 +231,10 @@ class Kmer_pairs:
 		df_p.to_csv("testout_p.csv")
 		df_n.to_csv("testout_n.csv")
 
-				
+			
+
+
+
 	def parse2(self, df, pval):
 		"""Parse table based on enrichment using Fishers Exact Test, default p value is 0.05. Uses df with both pos and neg
 		examples as the imput"""
