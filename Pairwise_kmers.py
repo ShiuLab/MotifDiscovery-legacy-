@@ -3,10 +3,14 @@
 FUNCTIONS (-f):
 
 make_pairs 	:=  	Make a file with all possible kmer pairs. For 6mers, should have 8,386,560 pairs.
-						Need: -k
+						Need: -k (# for k)
+
+make_pairs2 :=  	Make pairs and singleton file taking into consideration reverse complements. 
+						Need: -k (# for k)
+
 make_df    	:= 	 	Make a table with presence or absense of all kmers/kmer pairs for positive and negative genes. 
-			  		Works as input for RandomForest in R.
-			  			Need: -kmers, -p (fasta files), -n (fasta file), -ds, -out. 
+			  		Works as input for RandomForest in R. If including DNA Structure, make sure "DS5" is in your kmer list!!!!
+			  			Need: -k, -p (fasta files), -n (fasta file), -ds. 
 			  				*If no DNA Structure "-ds no"
 parse2		:=		Parse table based on enrichment using Fishers Exact Test, default p value is 0.05. Uses df with both pos and neg
 					examples as the imput. 
@@ -19,7 +23,9 @@ parse		:=		Old implementation of parse2, based on when there were separate df fo
 PARAMETERS AVAILABLE:
 
 -f 			:=		functions - defined above
--k 			:=		list of kmers. For make_pairs, list of singletons. For make_df, all k-mers/pairs you want in df
+-k 			:=		Varies by function. 
+						-make_pairs: # of kmer you want
+						-make_df: txt file with list of all k-mers/pairs you want in the df
 -p			:=		fasta files of positive examples (Will be given Class = 1)
 -n 			:=		fasta files of negative examples (Will be given Class = 0)
 -df 		:=		Presence or Absense dataframe (like those made with make_df).
@@ -27,29 +33,28 @@ PARAMETERS AVAILABLE:
 -pval 		:=		Default = 0.05
 
 
-'''
 
 """
 
 from collections import defaultdict
 import sys, os
 from Bio import SeqIO
-import pandas as pd
-import numpy as np
-from scipy import stats as stats
+import itertools
+from Bio.Seq import Seq
+#import pandas as pd
+#import numpy as np
+#from scipy import stats as stats
 
 class Kmer_pairs:
 
 	def make_pairs(self,kmers):
 		"""Make a file with all possible kmer pairs. For 6mers, should have 8,386,560 pairs"""
 
-		km = []
+		#Makes list of all possible kmers
+		bases = ['A','T','G','C']
+		km = [''.join(p) for p in itertools.product(bases, repeat=int(kmers))]
 
-		for l in open(kmers,'r'):
-			k = l.strip("\n")
-			km.append(k)
-
-
+		#Make all pairwise combinations of the pairs - order does not matter and a kmer does not pair with itself
 		pairs =[]
 		for i in range(0,len(km)-1):
 			for j in range(1,len(km)):
@@ -64,12 +69,54 @@ class Kmer_pairs:
 
 
 
+	def make_pairs2(self,kmers):
+		"""Make a file with all possible kmer pairs accounting for reverse complements. RC separated by '.', pairs by ' '"""
+
+		#Makes list of all possible kmers
+		bases = ['A','T','G','C']
+		km = [''.join(p) for p in itertools.product(bases, repeat=int(kmers))]
+		print("Possible kmers: " + str(len(km)))
+		
+		#Removes reverse complements so only one version present in list
+		for i in km:
+			s = Seq(i)
+			if s.reverse_complement() in km:
+				km.remove(s.reverse_complement())
+		print("Kmers (reverse complements removed): " + str(len(km)))
+
+		#Make list of all kmers with their reverse complement 
+		rc_list = []
+		for j in km:
+			revcomp = Seq(j).reverse_complement()
+			string = str(j) + "." + str(revcomp)
+			rc_list.append(string)
+
+		out = open(kmers+"mers_withRC.txt",'w')
+		for k in rc_list:
+			out.write("%s\n" % k)
+
+		#Make all pairwise combinations of the pairs - order does not matter and a kmer does not pair with itself
+		pairs =[]
+		for i in range(0,len(rc_list)-1):
+			for j in range(1,len(rc_list)):
+				if i+j < len(rc_list):
+					pairs.append(rc_list[i]+ " "+rc_list[i+j])
+
+		print("Number of pairs generated: kmers: "+ str(len(pairs)))
+
+		out2 = open(kmers+"mer_pairs_withRC.txt",'w')
+		for p in pairs:
+			out2.write("%s\n" % p)
+
 	def make_df(self, kmers, pos, neg, ds):
-		"""Make a table with presence or absense of all kmers/kmer pairs for 
-		positive and negative genes. For input into randomForest"""
+		"""Make a table with presence or absense of all kmers/kmer pairs for positive and negative genes. 
+		For input into randomForest. If inlcuding DNA Structure, include "DS5" in your kmer list"""
+
+		#Get name for saving df, based on positive fasta file name. 
 		n = pos.strip().split("/")[-1]
 		na = n[:-7]
 
+		#Put all kmers/kmer pairs into list
 		km = []
 		for l in open(kmers, 'r'):
 			km.append(l.strip("\n"))
@@ -92,15 +139,16 @@ class Kmer_pairs:
 			genes_neg[header]=seq
 		print("Negative Fasta file loaded")
 
+		##Read DNA Structure information into dictionary --- if -ds != no
 		dsinfo = defaultdict(list)
 		if not ds.startswith('no'): 
 			for l in open(ds,'r'):
 				gene = l.split('\t')[0]
-				DNAS = l.strip().split('\t')[1:6]
+				DNAS = l.strip().split('\t')[1:6]	#Each row has gene name and then the 5 DS principle components
 				dsinfo[gene]=DNAS
 
 
-		##Mark presence or absense of motifs in each sequence in the fasta file
+		##Mark presence or absense of motifs in each sequence in the pos fasta file - for each gene go through all motifs/DNA Structure
 		m = 0
 		allgenes = defaultdict(list)
 		for pi in genes:
@@ -108,10 +156,10 @@ class Kmer_pairs:
 			templist = []
 			templist.append("1")
 			for ki in km:
-				if ki=="DS5":
+				if ki=="DS5":			#If you're including DS in dataframe, you should includ "DS5" in your motif list
 					info= '\t'.join(dsinfo[pi])
-					templist.append(info)
-				elif " " in ki:
+					templist.append(info)	
+				elif " " in ki:			#Checks to see if motif is a pair - pairs are separated by a space
 					x = (len(ki)-1)/2
 					out_name = na+'_'+str(x)+"paired_df.txt"
 					kmer1 = ki.split(" ")[0]
@@ -121,7 +169,7 @@ class Kmer_pairs:
 						templist.append("1")
 					else:
 						templist.append("0")
-				else:
+				else:					#If not DS5, and no separation by a space, assumes you're looking at singletons.
 					x = len(ki)
 					out_name = na+'_'+str(x)+"single_df.txt"
 					seq = genes[pi]
@@ -136,16 +184,18 @@ class Kmer_pairs:
 			
 		print("All Positive Examples in Dictionary")
 
+		##Mark presence or absense of motifs in each sequence in the neg fasta file - for each gene go through all motifs/DNA Structure
+
 		j = 0
 		for ni in genes_neg:
 			j+=1
 			templist = []
 			templist.append("0")
 			for ki in km:
-				if ki=="DS5":
+				if ki=="DS5":			#If you're including DS in dataframe, you should includ "DS5" in your motif list
 					info= '\t'.join(dsinfo[ni])
 					templist.append(info)
-				elif " " in ki:
+				elif " " in ki:			#Checks to see if motif is a pair - pairs are separated by a space
 					kmer1 = ki.split(" ")[0]
 					kmer2 = ki.split(" ")[1]
 					seq = genes_neg[ni]
@@ -153,7 +203,7 @@ class Kmer_pairs:
 						templist.append("1")
 					else:
 						templist.append("0")
-				else:
+				else:					#If not DS5, and no separation by a space, assumes you're looking at singletons.
 					seq = genes_neg[ni]
 					if ki in seq:
 						templist.append("1")
@@ -176,7 +226,123 @@ class Kmer_pairs:
 		print("Done! # genes:" + str(len(allgenes)))
 
 
+	def make_df2(self, kmers, pos, neg, ds):
+		"""Make a table with presence or absense of all kmers/kmer pairs for positive and negative genes. 
+		This version works for kmer list that accound for reverse complements
+		For input into randomForest. If inlcuding DNA Structure, include "DS5" in your kmer list"""
 
+		#Get name for saving df, based on positive fasta file name. 
+		n = pos.strip().split("/")[-1]
+		na = n[:-7]
+
+		#Put all kmers/kmer pairs into list
+		km = []
+		for l in open(kmers, 'r'):
+			km.append(l.strip("\n"))
+
+		##Read positive fasta files into dictionary
+		genes = {}
+		p = open(pos,'r')
+		for seq_record in SeqIO.parse(p, 'fasta'):
+			header = seq_record.id
+			seq = (str(seq_record.seq))
+			genes[header]=seq
+		print("Positive Fasta file loaded")
+
+		##Read neg fasta files into dictionary
+		genes_neg = {}
+		n = open(neg,'r')
+		for seq_record in SeqIO.parse(n, 'fasta'):
+			header = seq_record.id
+			seq = (str(seq_record.seq))
+			genes_neg[header]=seq
+		print("Negative Fasta file loaded")
+
+		##Read DNA Structure information into dictionary --- if -ds != no
+		dsinfo = defaultdict(list)
+		if not ds.startswith('no'): 
+			for l in open(ds,'r'):
+				gene = l.split('\t')[0]
+				DNAS = l.strip().split('\t')[1:6]	#Each row has gene name and then the 5 DS principle components
+				dsinfo[gene]=DNAS
+
+
+		##Mark presence or absense of motifs in each sequence in the pos fasta file - for each gene go through all motifs/DNA Structure
+		m = 0
+		allgenes = defaultdict(list)
+		for pi in genes:
+			m+=1
+			templist = []
+			templist.append("1")
+			for ki in km:
+				if ki=="DS5":			#If you're including DS in dataframe, you should includ "DS5" in your motif list
+					info= '\t'.join(dsinfo[pi])
+					templist.append(info)	
+				elif " " in ki:			#Checks to see if motif is a pair - pairs are separated by a space
+					x = (len(ki)-1)/2
+					out_name = na+'_'+str(x)+"paired_df.txt"
+					kmer1 = ki.split(" ")[0]
+					kmer2 = ki.split(" ")[1]
+					seq = genes[pi]
+					if kmer1 in seq and kmer2 in seq:
+						templist.append("1")
+					else:
+						templist.append("0")
+				else:					#If not DS5, and no separation by a space, assumes you're looking at singletons.
+					x = len(ki)
+					out_name = na+'_'+str(x)+"single_df.txt"
+					seq = genes[pi]
+					if ki in seq:
+						templist.append("1")
+					else:
+						templist.append("0")
+						
+			allgenes[pi]=templist
+			if m%25==0:
+				print("Completed " + str(m) + " positive sequences")
+			
+		print("All Positive Examples in Dictionary")
+
+		##Mark presence or absense of motifs in each sequence in the neg fasta file - for each gene go through all motifs/DNA Structure
+
+		j = 0
+		for ni in genes_neg:
+			j+=1
+			templist = []
+			templist.append("0")
+			for ki in km:
+				if ki=="DS5":			#If you're including DS in dataframe, you should includ "DS5" in your motif list
+					info= '\t'.join(dsinfo[ni])
+					templist.append(info)
+				elif " " in ki:			#Checks to see if motif is a pair - pairs are separated by a space
+					kmer1 = ki.split(" ")[0]
+					kmer2 = ki.split(" ")[1]
+					seq = genes_neg[ni]
+					if kmer1 in seq and kmer2 in seq:
+						templist.append("1")
+					else:
+						templist.append("0")
+				else:					#If not DS5, and no separation by a space, assumes you're looking at singletons.
+					seq = genes_neg[ni]
+					if ki in seq:
+						templist.append("1")
+					else:
+						templist.append("0")
+						
+			allgenes[ni]=templist
+			if j%25==0:
+				print("Completed " + str(j) + " negative sequences")
+
+		print("All Negative Examples in Dictionary")
+
+		out = open(out_name,'w')
+		if not ds.startswith('no'):
+			out.write("Gene\tClass\t"+"DS1\tDS2\tDS3\tDS4\t"+'\t'.join(km))
+		else:
+			out.write("Gene\tClass\t"+'\t'.join(km))
+		for alli in allgenes:
+			out.write("\n"+alli +"\t"+ "\t".join(allgenes[alli]))
+		print("Done! # genes:" + str(len(allgenes)))
 
 	def parse(self, pos, neg, pval):
 		"""Parse table based on enrichment using Fishers Exact Test, default p value is 0.05"""
@@ -326,11 +492,20 @@ if __name__ == "__main__":
 		if "" in [kmers]:
 			print "Need files with all k-mers"
                 Kmer_pairs.make_pairs(kmers)
+        if F == "make_pairs2":
+		if "" in [kmers]:
+			print "Need files with all k-mers"
+                Kmer_pairs.make_pairs2(kmers)
 
         elif F == "make_df":
                 if "" in [kmers, pos, neg]:
                         print "Need kmer list (single or pairs), pos and neg fasta files, DNA strucuture file if desired, and output directory."
                 Kmer_pairs.make_df(kmers, pos, neg, ds)
+        
+        elif F == "make_df2":
+                if "" in [kmers, pos, neg]:
+                        print "Need kmer list (single or pairs), pos and neg fasta files, DNA strucuture file if desired, and output directory."
+                Kmer_pairs.make_df2(kmers, pos, neg, ds)
     
         elif F == "parse":
                 if "" in [pos, neg]:
