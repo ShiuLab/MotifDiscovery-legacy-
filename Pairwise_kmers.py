@@ -1,36 +1,43 @@
-"""Set up and run datasets through Random Forest
+"""Make data frames needed for Random Forest on single and paires of motifs
 
 FUNCTIONS (-f):
 
-make_pairs 	:=  	Make a file with all possible kmer pairs. For 6mers, should have 8,386,560 pairs.
-						Need: -k (# for k)
+make_pairs 	:=   Make a file with all possible kmer pairs. For 6mers, should have 8,386,560 pairs.
+                        Need: -k (# for k)
 
-make_pairs2 :=  	Make pairs and singleton file taking into consideration reverse complements. 
-						Need: -k (# for k)
+make_pairs2	:=   Make pairs and singleton file taking into consideration reverse complements. 
+                        Need: -k (# for k)
 
-make_df    	:= 	 	Make a table with presence or absense of all kmers/kmer pairs for positive and negative genes. 
-			  		Works as input for RandomForest in R. If including DNA Structure, make sure "DS5" is in your kmer list!!!!
-			  			Need: -k, -p (fasta files), -n (fasta file), -ds. 
-			  				*If no DNA Structure "-ds no"
-parse2		:=		Parse table based on enrichment using Fishers Exact Test, default p value is 0.05. Uses df with both pos and neg
-					examples as the imput. 
-						Need: -df
-						Optional: -pval (Default = 0.05)
-parse		:=		Old implementation of parse2, based on when there were separate df for the pos and neg examples.
-						Need: -p, -n
-						Optional: -pval (Default = 0.05)
+make_df    	:=   Make a table with presence or absense of all kmers/kmer pairs for positive and negative genes. 
+                     Works as input for RandomForest in R. If including DNA Structure, make sure "DS5" is in your kmer list!!!!
+                        Need: -k, -p (fasta files), -n (fasta file), -ds. 
+                         *If no DNA Structure "-ds no"
+
+parse_df	:=   Run Fisher's Exact Test on data in dataframe format (use make_df2 for reverse complement consideration).
+                     Outputs: _FETresults.txt (all motifs and pvalues)
+                            _sig_0.05.txt (list of motifs that were enriched (pvalue >= 0.05/your cut off)
+                      Need: -df
+                      Optional: -pval (Default = 0.05)
+		
+parse2		:=   Parse table based on enrichment using Fishers Exact Test, default p value is 0.05. Uses df with both pos and neg
+                     examples as the imput. 
+                      Need: -df
+                      Optional: -pval (Default = 0.05)
+parse		:=   Old implementation of parse2, based on when there were separate df for the pos and neg examples.
+                      Need: -p, -n
+                      Optional: -pval (Default = 0.05)
 
 PARAMETERS AVAILABLE:
 
--f 			:=		functions - defined above
--k 			:=		Varies by function. 
-						-make_pairs: # of kmer you want
-						-make_df: txt file with list of all k-mers/pairs you want in the df
--p			:=		fasta files of positive examples (Will be given Class = 1)
--n 			:=		fasta files of negative examples (Will be given Class = 0)
--df 		:=		Presence or Absense dataframe (like those made with make_df).
--ds 		:=		DNA Structural information (output from /mnt/home/azodichr/scripts/...)
--pval 		:=		Default = 0.05
+-f     :=  functions - defined above
+-k     :=  Varies by function. 
+             -make_pairs: # of kmer you want
+             -make_df: txt file with list of all k-mers/pairs you want in the df
+-p      :=  fasta files of positive examples (Will be given Class = 1)
+-n      :=  fasta files of negative examples (Will be given Class = 0)
+-df     :=  Presence or Absense dataframe (like those made with make_df)
+-ds     :=  DNA Structural information (output from /mnt/home/azodichr/scripts/...)
+-pval   :=  Default = 0.05
 
 
 
@@ -38,18 +45,14 @@ PARAMETERS AVAILABLE:
 
 from collections import defaultdict
 import sys, os
-from Bio import SeqIO
 import itertools
-from Bio.Seq import Seq
-#import pandas as pd
-#import numpy as np
-#from scipy import stats as stats
+
 
 class Kmer_pairs:
 
 	def make_pairs(self,kmers):
 		"""Make a file with all possible kmer pairs. For 6mers, should have 8,386,560 pairs"""
-
+		from Bio.Seq import Seq
 		#Makes list of all possible kmers
 		bases = ['A','T','G','C']
 		km = [''.join(p) for p in itertools.product(bases, repeat=int(kmers))]
@@ -67,7 +70,7 @@ class Kmer_pairs:
 		for p in pairs:
 			out.write("\n"+p)
 
-
+###################################################################################################################################
 
 	def make_pairs2(self,kmers):
 		"""Make a file with all possible kmer pairs accounting for reverse complements. RC separated by '.', pairs by ' '"""
@@ -108,9 +111,12 @@ class Kmer_pairs:
 		for p in pairs:
 			out2.write("%s\n" % p)
 
+###################################################################################################################################
+
 	def make_df(self, kmers, pos, neg, ds):
 		"""Make a table with presence or absense of all kmers/kmer pairs for positive and negative genes. 
 		For input into randomForest. If inlcuding DNA Structure, include "DS5" in your kmer list"""
+		from Bio import SeqIO
 
 		#Get name for saving df, based on positive fasta file name. 
 		n = pos.strip().split("/")[-1]
@@ -225,20 +231,24 @@ class Kmer_pairs:
 			out.write("\n"+alli +"\t"+ "\t".join(allgenes[alli]))
 		print("Done! # genes:" + str(len(allgenes)))
 
+###################################################################################################################################
 
 	def make_df2(self, kmers, pos, neg, ds):
 		"""Make a table with presence or absense of all kmers/kmer pairs for positive and negative genes. 
 		This version works for kmer list that accound for reverse complements
 		For input into randomForest. If inlcuding DNA Structure, include "DS5" in your kmer list"""
+		from Bio import SeqIO
 
-		#Get name for saving df, based on positive fasta file name. 
-		n = pos.strip().split("/")[-1]
-		na = n[:-7]
 
 		#Put all kmers/kmer pairs into list
 		km = []
 		for l in open(kmers, 'r'):
 			km.append(l.strip("\n"))
+
+		#Get name for saving df, based on positive fasta file name. 
+		n = pos.strip().split("/")[-1]
+
+		na = n[:-7]+"_k"+str(len(km))
 
 		##Read positive fasta files into dictionary
 		genes = {}
@@ -279,23 +289,49 @@ class Kmer_pairs:
 					info= '\t'.join(dsinfo[pi])
 					templist.append(info)	
 				elif " " in ki:			#Checks to see if motif is a pair - pairs are separated by a space
-					x = (len(ki)-1)/2
-					out_name = na+'_'+str(x)+"paired_df.txt"
-					kmer1 = ki.split(" ")[0]
-					kmer2 = ki.split(" ")[1]
-					seq = genes[pi]
-					if kmer1 in seq and kmer2 in seq:
-						templist.append("1")
+					if "." in ki:		#Checks to see if motifs are in reverse complement pairs
+						x = (len(ki)-3)/4
+						out_name = na+'_'+str(x)+"paired_rc_df.txt"
+						kmer1 = ki.split(" ")[0]
+						kmer2 = ki.split(" ")[1]
+						k1_F = kmer1.split(".")[0]
+						k1_R = kmer1.split(".")[1]
+						k2_F = kmer2.split(".")[0]
+						k2_R = kmer2.split(".")[1]
+						seq=genes[pi]
+						if k1_F in seq or k1_R in seq and k2_F in seq or k2_R in seq:
+							templist.append("1")
+						else:
+							templist.append("0")
 					else:
-						templist.append("0")
+						x = (len(ki)-1)/2
+						out_name = na+'_'+str(x)+"paired_df.txt"
+						kmer1 = ki.split(" ")[0]
+						kmer2 = ki.split(" ")[1]
+						seq = genes[pi]
+						if kmer1 in seq and kmer2 in seq:
+							templist.append("1")
+						else:
+							templist.append("0")
 				else:					#If not DS5, and no separation by a space, assumes you're looking at singletons.
-					x = len(ki)
-					out_name = na+'_'+str(x)+"single_df.txt"
-					seq = genes[pi]
-					if ki in seq:
-						templist.append("1")
+					if "." in ki:		#Checks to see if motifs are in reverse complement pairs
+						x = (len(ki)-1)/2
+						out_name = na+'_'+str(x)+"single_rc_df.txt"
+						k1_F = ki.split(".")[0]
+						k1_R = ki.split(".")[1]
+						seq=genes[pi]
+						if k1_F in seq or k1_R in seq:
+							templist.append("1")
+						else:
+							templist.append("0")
 					else:
-						templist.append("0")
+						x = len(ki)
+						out_name = na+'_'+str(x)+"single_df.txt"
+						seq = genes[pi]
+						if ki in seq:
+							templist.append("1")
+						else:
+							templist.append("0")
 						
 			allgenes[pi]=templist
 			if m%25==0:
@@ -315,19 +351,45 @@ class Kmer_pairs:
 					info= '\t'.join(dsinfo[ni])
 					templist.append(info)
 				elif " " in ki:			#Checks to see if motif is a pair - pairs are separated by a space
-					kmer1 = ki.split(" ")[0]
-					kmer2 = ki.split(" ")[1]
-					seq = genes_neg[ni]
-					if kmer1 in seq and kmer2 in seq:
-						templist.append("1")
-					else:
-						templist.append("0")
+					if "." in ki:		#Checks to see if motifs are in reverse complement pairs
+						x = (len(ki)-3)/4
+						out_name = na+'_'+str(x)+"paired_rc_df.txt"
+						kmer1 = ki.split(" ")[0]
+						kmer2 = ki.split(" ")[1]
+						k1_F = kmer1.split(".")[0]
+						k1_R = kmer1.split(".")[1]
+						k2_F = kmer2.split(".")[0]
+						k2_R = kmer2.split(".")[1]
+						seq=genes_neg[ni]
+						if k1_F in seq or k1_R in seq and k2_F in seq or k2_R in seq:
+							templist.append("1")
+						else:
+							templist.append("0")
+					else: 
+						kmer1 = ki.split(" ")[0]
+						kmer2 = ki.split(" ")[1]
+						seq = genes_neg[ni]
+						if kmer1 in seq and kmer2 in seq:
+							templist.append("1")
+						else:
+							templist.append("0")
 				else:					#If not DS5, and no separation by a space, assumes you're looking at singletons.
-					seq = genes_neg[ni]
-					if ki in seq:
-						templist.append("1")
+					if "." in ki:		#Checks to see if motifs are in reverse complement pairs
+						x = (len(ki)-1)/2
+						out_name = na+'_'+str(x)+"single_rc_df.txt"
+						k1_F = ki.split(".")[0]
+						k1_R = ki.split(".")[1]
+						seq=genes_neg[ni]
+						if k1_F in seq or k1_R in seq:
+							templist.append("1")
+						else:
+							templist.append("0")
 					else:
-						templist.append("0")
+						seq = genes_neg[ni]
+						if ki in seq:
+							templist.append("1")
+						else:
+							templist.append("0")
 						
 			allgenes[ni]=templist
 			if j%25==0:
@@ -344,12 +406,74 @@ class Kmer_pairs:
 			out.write("\n"+alli +"\t"+ "\t".join(allgenes[alli]))
 		print("Done! # genes:" + str(len(allgenes)))
 
+###################################################################################################################################
+
+	def parse_df(self, df, pval):
+		"""Make a table with presence or absense of all kmers/kmer pairs for positive and negative genes. 
+		This version works for kmer list that accound for reverse complements
+		For input into randomForest. If inlcuding DNA Structure, include "DS5" in your kmer list"""
+		from Bio import SeqIO
+		from scipy import stats as stats
+
+		#Get name for saving df, based on positive fasta file name. 
+		n = df[:-7]
+
+		p_genes = defaultdict(list)
+		n_genes = defaultdict(list)
+
+		c=0
+		for l in open(df,'r'):
+			c += 1
+			gene = l.strip().split("\t")[0]
+			if l.startswith("Gene"):
+				motifs = l.strip().split("\t")[2:]
+				for k in motifs:
+					p_genes[k].append("")
+					n_genes[k].append("")
+			elif l.strip().split("\t")[1] == "1":
+				pos_AbPr = l.strip().split("\t")[2:]
+				for i in range(0,len(pos_AbPr)):
+					if pos_AbPr[i] == "1":
+						p_genes[motifs[i]].append(gene)
+			elif l.strip().split('\t')[1] == "0":
+				neg_AbPr = l.strip().split("\t")[2:]
+				for i in range(0,len(neg_AbPr)):
+					if neg_AbPr[i] == "1":
+						n_genes[motifs[i]].append(gene)
+			else:
+				print("Error reading df, couldn't identify Class")
+
+		num_genes = (c-1)/2
+		pos_pres = {}
+		neg_pres = {}
+
+		for kmer in p_genes:
+			pos_pres[kmer]=len(p_genes[kmer])-1 	#-1 because of the blank "" in the p_genes and n_genes lists. 
+			neg_pres[kmer]=len(n_genes[kmer])-1
+
+		outFISH = open(n+"_FETresults.txt",'w')
+		outSIG = open(n+"_sig_"+str(pval)+".txt",'w')
+		for kmer in pos_pres:
+			try:
+				oddsratio,pvalue = stats.fisher_exact([[pos_pres[kmer],(num_genes-pos_pres[kmer])],[neg_pres[kmer],(num_genes-neg_pres[kmer])]])
+				outFISH.write(kmer + "\t" +str(pos_pres[kmer])+"\t"+ str(neg_pres[kmer])+ "\t"+ str(pvalue)+"\n")
+				if pvalue <= pval:
+					outSIG.write(kmer+"\n")
+
+			except ValueError:
+				outFISH.write(kmer + "\t" +str(pos_pres[kmer])+"\t"+ str(neg_pres[kmer])+ "\t1\n")
+
+
+
+###################################################################################################################################
+
 	def parse(self, pos, neg, pval):
 		"""Parse table based on enrichment using Fishers Exact Test, default p value is 0.05"""
+		import pandas as pd
+		import numpy as np
+		from scipy import stats as stats
 		n = pos[:-4]
 		out = open(n+"_FET.txt",'w')
-
-
 
 		positives = defaultdict(list)
 		for line in open(pos,'r'):
@@ -397,16 +521,19 @@ class Kmer_pairs:
 		df_p.to_csv("testout_p.csv")
 		df_n.to_csv("testout_n.csv")
 
-			
-
-
+###################################################################################################################################			
 
 	def parse2(self, df, pval):
 		"""Parse table based on enrichment using Fishers Exact Test, default p value is 0.05. Uses df with both pos and neg
 		examples as the imput"""
 
+		#import pandas as pd
+		#import numpy as np
+		from scipy import stats as stats
+
 		n = df[:-4]
 		out = open(n+"_FET.txt",'w')
+
 
 		num_pos = 0
 		num_neg = 0
@@ -461,7 +588,8 @@ class Kmer_pairs:
 
 
 
-#-------------------------------------------------------------------------------
+###################################################################################################################################
+
 if __name__ == "__main__":
 	Kmer_pairs=Kmer_pairs()
     # Print the main function help if no inputs are given.
@@ -506,7 +634,10 @@ if __name__ == "__main__":
                 if "" in [kmers, pos, neg]:
                         print "Need kmer list (single or pairs), pos and neg fasta files, DNA strucuture file if desired, and output directory."
                 Kmer_pairs.make_df2(kmers, pos, neg, ds)
-    
+        elif F == "parse_df":
+                if "" in [df]:
+                        print "Need dataframe."
+                Kmer_pairs.parse_df(df, pval)
         elif F == "parse":
                 if "" in [pos, neg]:
                         print "Need presenese/absense data frame for positive and negative examples and output directory"
