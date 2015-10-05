@@ -64,7 +64,7 @@ This will output two files:
 
 
 
-Getting RandomForest onto HPC:
+# Getting RandomForest onto HPC:
 $ Rscript -e "install.packages(‘LIBRARY_NAME',lib='~/R/library',contriburl=contrib.url('http://cran.r-project.org/'))”
 $ export R_LIBS_USER=~/R/library      #you will need to run this line every time you run RandomForest.R
 $ R
