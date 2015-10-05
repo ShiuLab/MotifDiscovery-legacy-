@@ -16,7 +16,7 @@ In HPC load:  Python3, Biopython, and SciPy
 
 Scripts: /mnt/home/azodichr/GitHub/MotifDiscovery/
 
-# GETTING YOUR FILES SET UP:
+# Set Up Your Files:
 1. Inside directory for Pairwise experiment make directories for FASTA files and Motif Lists:
 $ mkdir FastaFiles
 $ mkdir MotifLists
@@ -39,7 +39,7 @@ $ python Pairwise_kmers.py -f make_pairs2 –k 5
 $ python Pairwise_kmers.py -f make_pairs2 –k 6
 
 
-# MAKE YOUR PRESENCE/ABSENCE DATAFRAMES AND PARSE FOR ENRICHMENT
+# Make presence/absence dataframes and do enrichment
 The work flow here is 1) Make df with all kmers/pairs. 2) Make list of enriched kmers/pairs. 3) Remake df with just those enriched kmers/pairs.
 
 1. Make data frame with presence or absence of all kmer/kmer pair:
