@@ -5,7 +5,7 @@ Pairwise_kmers.py: Contains functions to make lists of paired kmers, make data f
 RandomForest.R: Runs Random Forest on input dataframe. 10 replicates and 10 fold cross validation. 
 
 
-What you need:
+# What you need:
 •	File with all your positive examples (naming scheme will be based off the name of the positive example file, so make sure that makes sense and isn't too long)
 •	File with all your negative examples
 •	Fasta file with all gene promoter regions. 
@@ -16,7 +16,7 @@ In HPC load:  Python3, Biopython, and SciPy
 
 Scripts: /mnt/home/azodichr/GitHub/MotifDiscovery/
 
-GETTING YOUR FILES SET UP:
+# GETTING YOUR FILES SET UP:
 1. Inside directory for Pairwise experiment make directories for FASTA files and Motif Lists:
 $ mkdir FastaFiles
 $ mkdir MotifLists
@@ -33,14 +33,14 @@ $ python /mnt/home/shius/codes/FastaManager.py -f getseq2 -fasta [promoter_seque
 *For arabidopsis you can use: /mnt/home/azodichr/01_DualStress_At/TAIR10_upstream1000_Alex_20101104.mod.fa
 
 4. Make singleton and paired kmer list. Reverse complement sequences are separated by “.”, pairs separated by a space (k = length of kmer you want):
-#Using these codes you will get singleton and pair lists for 5-mers and 6-mers.
+*Using these codes you will get singleton and pair lists for 5-mers and 6-mers.
 $ cd ../MotifLists
 $ python Pairwise_kmers.py -f make_pairs2 –k 5
 $ python Pairwise_kmers.py -f make_pairs2 –k 6
 
 
-MAKE YOUR PRESENCE/ABSENCE DATAFRAMES AND PARSE FOR ENRICHMENT
-# The work flow here is 1) Make df with all kmers/pairs. 2) Make list of enriched kmers/pairs. 3) Remake df with just those enriched kmers/pairs.
+# MAKE YOUR PRESENCE/ABSENCE DATAFRAMES AND PARSE FOR ENRICHMENT
+The work flow here is 1) Make df with all kmers/pairs. 2) Make list of enriched kmers/pairs. 3) Remake df with just those enriched kmers/pairs.
 
 1. Make data frame with presence or absence of all kmer/kmer pair:
 $ python Pairwise_kmers.py -f make_df –k [ListOfKmers] -p [positive fasta files] -n [negative fasta files]
