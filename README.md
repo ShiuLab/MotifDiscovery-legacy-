@@ -2,7 +2,7 @@
 Working with RandomForest in python and R to improve motif discovery
 
 Pairwise_kmers.py: Contains functions to make lists of paired kmers, make data frames of what genes contain those motifs, and run Fisher's Exact test to determine enrichment of those kmers/kmer pairs in the positive genes. 
-
+RandomForest.R: Runs Random Forest on input dataframe. 10 replicates and 10 fold cross validation. 
 
 
 What you need:
@@ -57,6 +57,10 @@ $ python Pairwise_kmers.py -f make_df –k [output from step 6, ending in: “_s
 $ export R_LIBS_USER=~/R/library
 $ R --vanilla --slave --args [df*] < RandomForest.R
 *Can use output df from step 1 or 3
+
+This will output two files:
+.imp.txt: Open in exel, sort by "Mean Decrease Accuracy" - Make sure you shift the column headers over by one- they skip the motif name heading...
+.Results.txt: Output with F-measure, stdev, sterror, and 95% confidence intervals.
 
 
 
