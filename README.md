@@ -2,10 +2,10 @@
 Working with RandomForest in python and R to improve motif discovery
 
 Pairwise_kmers.py: Contains functions to make lists of paired kmers, make data frames of what genes contain those motifs, and run Fisher's Exact test to determine enrichment of those kmers/kmer pairs in the positive genes. 
+RandomForest.R: Runs Random Forest on input dataframe. 10 replicates and 10 fold cross validation. 
 
 
-
-What you need:
+## What you need:
 •	File with all your positive examples (naming scheme will be based off the name of the positive example file, so make sure that makes sense and isn't too long)
 •	File with all your negative examples
 •	Fasta file with all gene promoter regions. 
@@ -16,27 +16,57 @@ In HPC load:  Python3, Biopython, and SciPy
 
 Scripts: /mnt/home/azodichr/GitHub/MotifDiscovery/
 
-1. Inside directory for Pairwise experiment make directory for FASTA files:
-$ mkdir FastaFiles
+## Set Up Your Files:
+1. Inside directory for Pairwise experiment make directories for FASTA files and Motif Lists:
+  - mkdir FastaFiles
+  - mkdir MotifLists
 
 2. Put cluster file in FastaFiles dir and get promoter sequence:
-$ cp ~/01_DualStress_At/00_Clusters/00_RasCat_Kmer/73.co1k3.txt FastaFiles/
-$ python /mnt/home/shius/codes/FastaManager.py -f getseq2 -fasta ~/01_DualStress_At/TAIR10_upstream1000_Alex_20101104.mod.fa -name FastaFiles/73.co1k3.txt
+  - cd FastaFiles/
+  - cp [pos_examples] .
+  - python /mnt/home/shius/codes/FastaManager.py -f getseq2 -fasta [promoter sequences] -name [pos examples]
+  - *For arabidopsis you can use: /mnt/home/azodichr/01_DualStress_At/TAIR10_upstream1000_Alex_20101104.mod.fa*
 
-3. Select negative example files in order to have balanced experiment:
-$ head -73 ~/01_DualStress_At/negativecontrol_good_1000.txt > 73.neg.txt
-$ python /mnt/home/shius/codes/FastaManager.py -f getseq2 -fasta ~/01_DualStress_At/TAIR10_upstream1000_Alex_20101104.mod.fa -name 73.neg.txt
+3. Put negative example file in FastaFiles dir and get promoter sequence. 
+  - cp [neg_examples] .     #For Random Forest you want a 1:1 ratio of positive and negative examples, if 73 genes in cluster, randomly select 73 negative examples.
+  - python /mnt/home/shius/codes/FastaManager.py -f getseq2 -fasta [promoter sequences] -name [neg examples]
+  - *For arabidopsis you can use: /mnt/home/azodichr/01_DualStress_At/TAIR10_upstream1000_Alex_20101104.mod.fa*
 
 4. Make singleton and paired kmer list. Reverse complement sequences are separated by “.”, pairs separated by a space (k = length of kmer you want):
-$ python Pairwise_kmers.py -f make_pairs2 –k 6
+  - cd ../MotifLists
+  - python Pairwise_kmers.py -f make_pairs2 –k 5
+  - python Pairwise_kmers.py -f make_pairs2 –k 6
 
-5. Make data frame with presence or absence of all kmer/kmer pair:
-$ python Pairwise_kmers.py -f make_df2 –k <ListOfKmers> -p <positive fasta files> -n <negative fasta files> -ds <DNA Structure info/no> 
 
-6. If you want all the motifs move on to step 8, otherwise parse your motifs using Fisher's Exact Test:
-$ python Pairwise_kmers.py -f parse_df –df <df from step 5> -pval <Default is 0.05>
+## Make presence/absence dataframes and do enrichment
+The work flow here is 1) Make df with all kmers/pairs. 2) Make list of enriched kmers/pairs. 3) Remake df with just those enriched kmers/pairs.
 
-7. Re-make data frame with only enriched motifs:
-$ python Pairwise_kmers.py -f make_df2 –k <output from step 6, ending in: “_sig_0.05.txt” > -p <positive fasta files> -n <negative fasta files> -ds <DNA Structure info/no> 
+1. Make data frame with presence or absence of all kmer/kmer pair:
+  - python Pairwise_kmers.py -f make_df –k [ListOfKmers] -p [positive fasta files] -n [negative fasta files]
+  - *If you want to add DNA structure information to your prediction ask me. It didn't add much to my prediction...*
 
-8. Load data frame (all or fisher’s enriched) into R:
+2. If you want all the motifs move on to step 4, otherwise parse your motifs using Fisher's Exact Test:
+  - python Pairwise_kmers.py -f parse_df –df [output df from step 5]
+  OPTIONAL: -pval <Default is 0.05>
+
+3. Re-make data frame with only enriched motifs:
+  - python Pairwise_kmers.py -f make_df –k [output from step 6, ending in: “_sig_0.05.txt”] -p [positive fasta files] -n [negative fasta files]
+
+4. Run Random Forest in R. If randomForest is not in your library yet, see the end of this document.
+  - export R_LIBS_USER=~/R/library
+  - R --vanilla --slave --args [df*] < RandomForest.R
+  - *Can use output df from step 1 or 3*
+
+This will output two files:
+  - .imp.txt: Open in exel, sort by "Mean Decrease Accuracy" - Make sure you shift the column headers over by one- they skip the motif name heading...
+  - .Results.txt: Output with F-measure, stdev, sterror, and 95% confidence intervals.
+
+
+
+### Getting RandomForest onto HPC:
+  - Rscript -e "install.packages(‘LIBRARY_NAME',lib='~/R/library',contriburl=contrib.url('http://cran.r-project.org/'))”
+  - export R_LIBS_USER=~/R/library      *you will need to run this line every time you run RandomForest.R*
+  - R
+  - Sys.getenv("R_LIBS_USER")
+  - library(“LIBRARY_NAME")
+  - q()
