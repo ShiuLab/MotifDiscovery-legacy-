@@ -114,7 +114,7 @@ def Find_Enrich(POS, NEG, km, PVAL, SAVE):
   for k in positive_present:
     try:
       count += 1 
-      oddsratio,pvalue = fisher_exact([[positive_present[k],(num_pos-positive_present[k])],[negative_present[k],(num_neg-negative_present[k])]])
+      oddsratio,pvalue = fisher_exact([[positive_present[k],(num_pos-positive_present[k])],[negative_present[k],(num_neg-negative_present[k])]],alternative='less')
       outFISH.write('\n%s\t%d\t%d\t%.7f' % (k, (positive_present[k]),(negative_present[k]),pvalue))
       if pvalue <= PVAL:          # Remove unenriched features from dataframe
         enriched_kmers[k] = pvalue
