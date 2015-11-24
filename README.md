@@ -1,9 +1,29 @@
 # MotifDiscovery
-Working with RandomForest in python and R to improve motif discovery
+Original pipeline used python for processing dataframes and R for running Random Forest. For those instructions see bottom of the document (Python & R Pipeline)
 
+New pipeline uses SciPy to determine enrichment, Numpy and Pandas for dataframe management, and SciKit Learn for RandomForest
+
+## Updates to the Pipeline:
+Nov 24 2015 : Make Fisher's Exact Test 1-Tailed (only looking at enrichment in positive class) & remove Training/Testing data split since using cross-validation
+
+Nov 13 2015 : Alter script so that enriched kmers are lengthened by 1 bp until they are no longer enriched
+
+Oct 26 2015 : Switch from Python+R Pipeline to running everything in Python, this included changing to include reverse complement information, and to run the ML using 20 sets of random negative example genes. 
+
+## How to Run New Pipeline
+1. Anytime you log in to HPC and want to use the pipeline you have to first run:
+    - export   PATH=/mnt/home/azodichr/miniconda3/bin:$PATH
+2. Import positive example and negative example FASTA files - the pipeline finds enriched kmers, lengthens kmers if possible, and runs 20 RandomForest models each with a different random negative set so that the ML is balanced. 
+    - python /mnt/home/azodichr/GitHub/MotifDiscovery/RandomForest_v2.0.py -pos [FASTA FILE] -neg [FASTA FILE] -k /mnt/home/azodichr/ML_Python/6mers.txt (or 5mers.txt) -imp yes -save NAME -pval 0.05 (or whatever you want, I wouldn’t go below 0.01)
+
+
+
+
+
+
+#Python & R Pipeline
 Pairwise_kmers.py: Contains functions to make lists of paired kmers, make data frames of what genes contain those motifs, and run Fisher's Exact test to determine enrichment of those kmers/kmer pairs in the positive genes. 
 RandomForest.R: Runs Random Forest on input dataframe. 10 replicates and 10 fold cross validation. 
-
 
 ## What you need:
 •	File with all your positive examples (naming scheme will be based off the name of the positive example file, so make sure that makes sense and isn't too long)
