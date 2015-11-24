@@ -269,10 +269,11 @@ def RandomForest(pd_DF, SAVE):
     
     for i in range(num_cv_to_run):                        #Run x replicates of cv
       m += 1
-      X_train, X_test, Y_train, Y_test = train_test_split(x,y,test_size=0.3, random_state=i)              #Set up training/testing data sets for each replication
+      #X_train, X_test, Y_train, Y_test = train_test_split(x,y,test_size=0.3, random_state=i)              #Set up training/testing data sets for each replication
       forest = RandomForestClassifier(criterion='entropy',n_estimators=500, random_state=1, n_jobs=2)
-      forest = forest.fit(X_train, Y_train)                                                               #Train the model
-      scores = cross_val_score(estimator=forest, X=X_train, y=Y_train, cv=10, n_jobs=2)                   #Make predictions with 10x CV
+      #forest = forest.fit(X_train, Y_train)
+      forest = forest.fit(x, y)                                                               #Train the model
+      scores = cross_val_score(estimator=forest, X=x, y=y, cv=10, n_jobs=2)                   #Make predictions with 10x CV
       cv = np.insert(cv, 0, np.mean(scores))
       if IMP == 'yes':
         importances = forest.feature_importances_
