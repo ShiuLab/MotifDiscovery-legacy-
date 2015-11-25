@@ -4,6 +4,8 @@ Original pipeline used python for processing dataframes and R for running Random
 New pipeline uses SciPy to determine enrichment, Numpy and Pandas for dataframe management, and SciKit Learn for RandomForest
 
 ## Updates to the Pipeline:
+Nov 25 2015 : Simplify and standardize outputs (gives stdev and SE), also changed the random_state generator in RandomForestClassifier from an int to the default which is np.random.
+
 Nov 24 2015 : Make Fisher's Exact Test 1-Tailed (only looking at enrichment in positive class) & remove Training/Testing data split since using cross-validation
 
 Nov 13 2015 : Alter script so that enriched kmers are lengthened by 1 bp until they are no longer enriched
