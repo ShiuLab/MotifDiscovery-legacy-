@@ -227,8 +227,8 @@ def Make_DF(K, PVAL, SAVE):
 
   final_km_NoDups = list(set(final_km))
   pd_DF, enriched_kmers = Find_Enrich(POS, NEG, final_km_NoDups, PVAL, SAVE)
-
-  print('%d kmers enriched at p = %s' % (pd_DF.shape[1]-1, PVAL))
+  features = pd_DF.shape[1]-1
+  print('%d kmers enriched at p = %s' % (features, PVAL))
   enriched_name = SAVE + "_df_p" + str(PVAL) + ".txt"
   pd_DF.to_csv(enriched_name, sep='\t')
   return(pd_DF)
@@ -238,6 +238,7 @@ def RandomForest(pd_DF, SAVE):
 
   from sklearn.cross_validation import train_test_split, cross_val_score, ShuffleSplit
   from sklearn.ensemble import RandomForestClassifier 
+  import scipy as sp
 
   #full_df = pd.read_csv(pd_DF, sep='\t',header=0)
   #df = pd_DF
@@ -269,9 +270,7 @@ def RandomForest(pd_DF, SAVE):
     
     for i in range(num_cv_to_run):                        #Run x replicates of cv
       m += 1
-      #X_train, X_test, Y_train, Y_test = train_test_split(x,y,test_size=0.3, random_state=i)              #Set up training/testing data sets for each replication
       forest = RandomForestClassifier(criterion='entropy',n_estimators=500, random_state=1, n_jobs=2)
-      #forest = forest.fit(X_train, Y_train)
       forest = forest.fit(x, y)                                                               #Train the model
       scores = cross_val_score(estimator=forest, X=x, y=y, cv=10, n_jobs=2)                   #Make predictions with 10x CV
       cv = np.insert(cv, 0, np.mean(scores))
@@ -282,19 +281,26 @@ def RandomForest(pd_DF, SAVE):
         else:
           a = np.asarray([importances])
           imp = np.concatenate((imp, a), axis = 0)
-    results_out.write('Random Dataframe %s: CV accuracy: %.3f 95%% CI +/- %.3f\n' % (j+1, np.mean(cv), np.std(cv)*2))
-    print("Replicate %d: CV accuracy: %.3f 95%% CI +/- %.3f" % (j+1, np.mean(cv), np.std(cv)*2))
-    cv_means = np.insert(cv_means, 0, np.mean(cv))
+    F_m = np.mean(cv)
+    CI95_1 = np.std(cv)*2
+    results_out.write('Random Dataframe %s: F measure: %.3f 95%% CI +/- %.3f\n' % (j+1, F_m, CI95_1))
+    print("Replicate %d: CV accuracy: %.3f 95%% CI +/- %.3f" % (j+1, F_m, CI95_1))
+    cv_means = np.insert(cv_means, 0, F_m)
 
   if IMP == 'yes':
     pd_imp = pd.DataFrame(imp, index=range(1,(num_df_to_run*num_cv_to_run+1)), columns=list(full_df)[1:])   #Turn importance array into df
-    #pd_imp.to_csv(SAVE + "_imp_detailed.txt", sep='\t', header = "Feature\tImportanceMeasure")              #Save details - can turn this off!
     pd_imp_mean = pd_imp.mean(axis=0)                    #Find means for importance measure
     pd_imp_mean.to_csv(SAVE + "_imp.txt", sep='\t')
-    
-  results_out.write('\nAverage: CV accuracy: %.3f 95%% CI +/- %.3f\n' % (np.mean(cv_means), np.std(cv_means)*2))
-  open("RESULTS.txt",'a').write('%s\t%.3f\t%.3f\t%.3f\n' % (SAVE, np.mean(cv_means), np.std(cv_means)*2,(np.std(cv_means)/sqrt(num_df_to_run))))
-  print('Average: CV accuracy: %.3f 95%% CI +/- %.3f\nStandard Deviation: %.3f\nStandard Error: %.3f' % (np.mean(cv_means), np.std(cv_means)*2, np.std(cv_means), (np.std(cv_means)/sqrt(num_df_to_run))))
+  
+  F_measure = np.mean(cv_means)
+  sigma = np.std(cv_means)
+  n=len(cv_means)
+  SE = np.std(cv_means)/sqrt(n)
+  CI95 = stats.norm.interval(0.95, loc=F_measure, scale=sigma/sqrt(n))
+
+  results_out.write('\nAverage: F measure: %.3f 95%% CI +/- %.3f\n' % (F_measure, CI95))
+  open("RESULTS.txt",'a').write('%s\t%.3f\t%.3f\t%.3f\n' % (SAVE, F_measure, CI95))
+  print('Average: F measure: %.3f 95%% CI +/- %.3f\nStandard Deviation: %.3f\nStandard Error: %.3f' % (F_measure, CI95, sigma, SE))
 
 #Make_DF(K, PVAL, SAVE)
 #RandomForest(pd_DF,SAVE)
@@ -305,51 +311,3 @@ RandomForest(Make_DF(K, PVAL, SAVE), SAVE)
 stop = timeit.default_timer()
 print('Run time: %.2f min' % ((stop-start)/60))
 
-"""
-#Other options available for ML using sklearn
-
-
-# Get Confusion Matrix from one run
-from sklearn.metrics import confusion_matrix
-y_pred = forest.predict(X_test)
-confmat = confusion_matrix(y_true=Y_test, y_pred=y_pred)
-
-
-#Just one rep with no CV - print Precision, Recall and F score
-from sklearn.metrics import precision_score, recall_score, f1_score
-print('Precision: %.3f' % precision_score(y_true=Y_test, y_pred=y_pred))
-print('Recall: %.3f' % recall_score(y_true=Y_test, y_pred=y_pred))
-print('F1: %.3f' % f1_score(y_true=Y_test, y_pred=y_pred))
-
-#Long way to calculate CV score
-from sklearn.cross_validation import StratifiedKFold
-kfold = StratifiedKFold(y=Y_train, n_folds=20, random_state=1)
-scores = []
-for k, (train, test) in enumerate(kfold):
-  forest.fit(X_train[train],Y_train[train])
-  score = forest.score(X_train[test],Y_train[test])
-  scores.append(score)
-  print('Fold: %s, Class dist: %s, Acc: %.3f' % (k+1, np.bincount(Y_train[train]),score))
-print('CV accuracy: %.3f +/- %.3f' % (np.mean(scores), np.std(scores)))
-
-
-# To plot confusion matrix
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-fig, ax=plt.subplots(2,2,figsize=(2.5,2.5))
-ax.matshow(confmat, cmap=plt.cm.Blues, alpha=0.3)
-for i in range(confmat.shape[0]):
-  for j in range(confmat.shape[1]):
-    ax.text(x=j, y=i, s=confmat[i,j], va='center', ha='center')
-plt.xlabel('predicted')
-plt.ylabel('true')
-plt.savefig("test_fig.png")
-
-
-#To plot decision if numerical variables (i.e. petal width vs. petal length)
-from plot_decision import plot_decision_regions
-X_combined = np.vstack((X_train, X_test))
-Y_combined = np.hstack((Y_train, Y_test))
-plot_decision_regions(X_combined, Y_combined, classifier=forest, test_idx=range(105,150))
-"""

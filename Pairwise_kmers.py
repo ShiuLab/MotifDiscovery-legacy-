@@ -298,7 +298,7 @@ class Kmer_pairs:
 
 		#Get name for saving df, based on positive fasta file name. 
 		n = df.split("/")[-1][:-7]
-		p_genes = defaultdict(list)
+		p_genes = defaultdict(list)			#These will be dictionary with motif/set as key and list with all genes that have that motif/set as value
 		n_genes = defaultdict(list)
 
 		c=0
@@ -310,15 +310,15 @@ class Kmer_pairs:
 				for k in motifs:
 					p_genes[k].append("")
 					n_genes[k].append("")
-			elif l.strip().split("\t")[1] == "1":
+			elif l.strip().split("\t")[1] == "1":		# If Class = 1 (positive examples)
 				pos_AbPr = l.strip().split("\t")[2:]
-				for i in range(0,len(pos_AbPr)):
-					if pos_AbPr[i] == "1":
+				for i in range(0,len(pos_AbPr)):			# For all motifs/sets of motifs
+					if pos_AbPr[i] == "1":							# If the motif is present ('1') put it in p_genes
 						p_genes[motifs[i]].append(gene)
-			elif l.strip().split('\t')[1] == "0":
+			elif l.strip().split('\t')[1] == "0":		# If Class = 0 (negative examples)
 				neg_AbPr = l.strip().split("\t")[2:]
-				for i in range(0,len(neg_AbPr)):
-					if neg_AbPr[i] == "1":
+				for i in range(0,len(neg_AbPr)):			# For all motifs/sets of motifs
+					if neg_AbPr[i] == "1":							# If the motif is present ('1') put it in n_genes
 						n_genes[motifs[i]].append(gene)
 			else:
 				print("Error reading df, couldn't identify Class")
