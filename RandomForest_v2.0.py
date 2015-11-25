@@ -276,7 +276,7 @@ def RandomForest(pd_DF, SAVE):
   
   m = 0
 
-  num_df_to_run = 2
+  num_df_to_run = 20
   num_cv_to_run = 10
 
   cv_means = np.array([])
