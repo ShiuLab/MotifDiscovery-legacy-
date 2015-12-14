@@ -326,7 +326,7 @@ def RandomForest(pd_DF, SAVE):
 
   results_out.write('\nNumber of features: %.1f' % (n_features))
   results_out.write('\nAverage\t%.4f\t%.4f\t%.4f' % (F_measure, sigma, SE))
-  open("RESULTS.txt",'a').write('%s\t%.1f\t%.1f\t%.1f%.4f\t%.4f\t%.4f\n' % (SAVE, n_features, num_df_to_run, num_cv_to_run, F_measure, sigma, SE))
+  open("RESULTS.txt",'a').write('%s\t%.1f\t%.1f\t%.1f\t%.4f\t%.4f\t%.4f\n' % (SAVE, n_features, num_df_to_run, num_cv_to_run, F_measure, sigma, SE))
   print('Average: F measure: %.3f\nStandard Deviation: %.3f\nStandard Error: %.3f' % (F_measure, sigma, SE))
 
 #Make_DF(K, PVAL, SAVE)
