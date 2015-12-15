@@ -18,10 +18,7 @@ Oct 26 2015 : Switch from Python+R Pipeline to running everything in Python, thi
 2. Import positive example and negative example FASTA files - the pipeline finds enriched kmers, lengthens kmers if possible, and runs 20 RandomForest models each with a different random negative set so that the ML is balanced. 
     - python /mnt/home/azodichr/GitHub/MotifDiscovery/RandomForest_v2.0.py -pos [FASTA FILE] -neg [FASTA FILE] -k /mnt/home/azodichr/ML_Python/6mers.txt (or 5mers.txt) -imp yes -save NAME -pval 0.01
 
-Example of short runcc.txt file to submit to hpc:
-cd /mnt/home/azodichr/01_DualStress_At/12_RF_Python/13_OneTailed/01_p01; export PATH=/mnt/home/azodichr/miniconda3/bin:$PATH;python /mnt/home/azodichr/GitHub/MotifDiscovery/RandomForest_v2.0.py -pos /mnt/home/azodichr/01_DualStress_At/12_RF_Python/01_Upreg_6merGrow/Fasta_Files/UNU_k1_promoter.fa -neg /mnt/home/azodichr/01_DualStress_At/12_RF_Python/01_Upreg_6merGrow/Fasta_Files/NNN_1000_promoter.fa -save UNU_k1_pro -k /mnt/home/azodichr/01_DualStress_At/12_RF_Python/01_Upreg_6merGrow/6mers.txt -imp yes -pval 0.01
-cd /mnt/home/azodichr/01_DualStress_At/12_RF_Python/13_OneTailed/01_p01; export PATH=/mnt/home/azodichr/miniconda3/bin:$PATH;python /mnt/home/azodichr/GitHub/MotifDiscovery/RandomForest_v2.0.py -pos /mnt/home/azodichr/01_DualStress_At/12_RF_Python/01_Upreg_6merGrow/Fasta_Files/UNU_k1_3UTR.fa -neg /mnt/home/azodichr/01_DualStress_At/12_RF_Python/01_Upreg_6merGrow/Fasta_Files/NNN_1000_3UTR.fa -save UNU_k1_3UTR -k /mnt/home/azodichr/01_DualStress_At/12_RF_Python/01_Upreg_6merGrow/6mers.txt -imp yes -pval 0.01
-cd /mnt/home/azodichr/01_DualStress_At/12_RF_Python/13_OneTailed/01_p01; export PATH=/mnt/home/azodichr/miniconda3/bin:$PATH;python /mnt/home/azodichr/GitHub/MotifDiscovery/RandomForest_v2.0.py -pos /mnt/home/azodichr/01_DualStress_At/12_RF_Python/01_Upreg_6merGrow/Fasta_Files/UNU_k1_int1.fa -neg /mnt/home/azodichr/01_DualStress_At/12_RF_Python/01_Upreg_6merGrow/Fasta_Files/NNN_1000_int1.fa -save UNU_k1_int1 -k /mnt/home/azodichr/01_DualStress_At/12_RF_Python/01_Upreg_6merGrow/6mers.txt -imp yes -pval 0.01
+Example of short runcc.txt file to submit to hpc:     -/mnt/home/azodichr/01_DualStress_At/12_RF_Python/13_OneTailed/01_p01/runcc_clusters_01.txt
 
 
 
