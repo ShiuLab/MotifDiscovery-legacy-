@@ -19,6 +19,7 @@ Oct 26 2015 : Switch from Python+R Pipeline to running everything in Python, thi
     - python /mnt/home/azodichr/GitHub/MotifDiscovery/RandomForest_v2.0.py -pos [FASTA FILE] -neg [FASTA FILE] -k /mnt/home/azodichr/ML_Python/6mers.txt (or 5mers.txt) -imp yes -save NAME -pval 0.01
 
 Example of short runcc.txt file to submit to hpc:
+
 •	/mnt/home/azodichr/01_DualStress_At/12_RF_Python/13_OneTailed/01_p01/runcc_clusters_01.txt
 
 
