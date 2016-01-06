@@ -15,7 +15,7 @@ for i in range (1,len(sys.argv),2):
 
 
 df = pd.read_csv(DF, sep='\t',header=0)
-print(size(df))
+print(df.info())
 
 #var_names = list(df.columns.values)[2:]
 
