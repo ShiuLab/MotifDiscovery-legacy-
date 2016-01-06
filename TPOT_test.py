@@ -18,15 +18,12 @@ for i in range (1,len(sys.argv),2):
 df = pd.read_csv(DF, sep='\t',header=0)
 print(df.info())
 
-#var_names = list(df.columns.values)[2:]
-
-"""
-digits = load_digits()  
-X_train, X_test, y_train, y_test = train_test_split(digits.data, digits.target,  
+ 
+X_train, X_test, y_train, y_test = train_test_split(df.iloc[:,1:], df['class'],  
                                                     train_size=0.75)  
   
 tpot = TPOT(generations=5, verbosity=2)  
 tpot.fit(X_train, y_train)  
 print(tpot.score(X_train, y_train, X_test, y_test))
-tpot.export('tpot_exported_pipeline.py')
-"""
+tpot.export('tpot_NNU_k3_pro_p05_pipeline.py')
+
