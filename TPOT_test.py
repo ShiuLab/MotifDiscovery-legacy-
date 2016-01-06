@@ -5,6 +5,7 @@ Testing TPOT [Tree-based Pipeline Optimization Tool] built by Randy Olson
 
 from tpot import TPOT
 import sys
+import pandas as pd
 from sklearn.datasets import load_digits  
 from sklearn.cross_validation import train_test_split  
   
