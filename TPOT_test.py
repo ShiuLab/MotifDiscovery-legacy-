@@ -15,7 +15,7 @@ for i in range (1,len(sys.argv),2):
         DF = sys.argv[i+1]
 
 
-df = pd.read_csv(DF, sep='\t',header=0)
+df = pd.read_csv(DF, sep='\t',header=0, index_col=0)
 print(df.info())
 
  
