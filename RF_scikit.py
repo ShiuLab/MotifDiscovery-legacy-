@@ -6,6 +6,8 @@ Run classification RF from sci-kit learn on a given dataframe
 INPUT:
   -df       Feature dataframe for ML. Format -> Col 1 = example.name, Col 2 = Class, Col 3-... = Features.
   -save     Save name (will overwrite some results files if the same as other names in the directory youre exporting to)
+  -pos      String for what codes for the positive example (i.e. UUN) Default = 1
+  -neg      String for what codes for the negative example (i.e. NNN) Default = 0
   -score    Default: F-measure. Can change to AUC-ROC using roc_auc
   -feat     Default: all (i.e. everything in the dataframe given). Can import txt file with list of features to keep.
 
@@ -20,6 +22,8 @@ import numpy as np
 import sys
 from math import sqrt
 
+neg = '0'
+pos = '1'
 SCORE = 'f1'    #Scoring method for RF, default F-measure, can change to AUC-ROC using -score roc_auc
 FEAT = 'all'    #Features to include from dataframe. Default = all (i.e. don't remove any from the given dataframe)
 
