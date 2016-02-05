@@ -3,6 +3,9 @@ PURPOSE:
 Run classification RF from sci-kit learn on a given dataframe
 *When submitting jobs ask for 8 nodes! 
 
+Must set path to Miniconda in HPC:  export PATH=/mnt/home/azodichr/miniconda3/bin:$PATH
+
+
 INPUT:
   -df       Feature dataframe for ML. Format -> Col 1 = example.name, Col 2 = Class, Col 3-... = Features.
   -save     Save name (will overwrite some results files if the same as other names in the directory youre exporting to)

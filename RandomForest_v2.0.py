@@ -274,27 +274,36 @@ def RandomForest(pd_DF, SAVE):
   all_neg = full_df[full_df.Class == 0]
   print("%d positive examples and %d negative examples in dataframe" % (pos_size, all_neg.shape[0]))
   
-  m = 0
+  m = 0 
+  num_df = 50        #Number of random balanced replicates (Rand_df_reps)
+  num_rep = 10       #Number of CV replicates (cv_reps)
+  num_cv = 10       #Cross validation fold
 
-  num_df_to_run = 20
-  num_cv_to_run = 10
 
-  cv_means = np.array([])
+  #Make empty array to save score from each random balanced replicate. Size = num_df
+  Rand_df_reps = np.array([])
   
-  for j in range(num_df_to_run):
+  #Run for each balanced dataset
+  for j in range(num_df):
     
+    #Make balanced dataset with random negative examples drawn
     random_neg = all_neg.sample(n=pos_size)                       #take random subset of negative examples - same size as positive
     df = pd.DataFrame.merge(all_pos, random_neg, how = 'outer')   #Make balanced dataframe
     y = df.iloc[:,0].values                                       #Designate Column with class information
     x = df.iloc[:,1:].values                                      #Designate Columns with variable information
-    cv = np.array([])
     
-    for i in range(num_cv_to_run):                        #Run x replicates of cv
+    #Make an empty array to save scores each CV replicate. Size = num_rep
+    cv_reps = np.array([])
+    
+    #Run 'num_rep' replicates of the CV run. 
+    for i in range(num_rep):                       
       m += 1
-      forest = RandomForestClassifier(criterion='entropy',n_estimators=500, n_jobs=8)
+      forest = RandomForestClassifier(criterion='entropy',n_estimators=500, n_jobs=8)         #Define the type of model
       forest = forest.fit(x, y)                                                               #Train the model
-      scores = cross_val_score(estimator=forest, X=x, y=y, cv=10, n_jobs=2)                   #Make predictions with 10x CV
-      cv = np.insert(cv, 0, np.mean(scores))
+      scores = cross_validation.cross_val_score(forest, x, y, cv=num_cv, scoring=SCORE)     #Make predictions with CV
+      cv_reps = np.insert(cv_reps, 0, np.mean(scores))
+
+      #Add importance values to imp array
       importances = forest.feature_importances_
       if m == 1:
         imp = np.asarray([importances])             
@@ -302,32 +311,33 @@ def RandomForest(pd_DF, SAVE):
         a = np.asarray([importances])
         imp = np.concatenate((imp, a), axis = 0)
 
-    N = len(cv)
-    F_measure_1 = np.mean(cv)
-    sigma_1 = np.std(cv)
-    n_1=len(cv)
-    SE_1 = sigma_1/sqrt(N)
-    print(cv, N, F_measure_1, sigma_1, SE_1)
+    #Calculate stats for the CV replicates, write to _RF_results.txt file and print
+    F_measure_cv_reps = np.mean(cv_reps)
+    sigma_cv_reps = np.std(cv_reps)
+    SE_cv_reps = sigma_cv_reps/sqrt(len(cv_reps))
+    results_out.write('\n%s\t%.4f\t%.4f\t%.4f' % (j+1, F_measure_cv_reps, sigma_cv_reps, SE_cv_reps))
+    print("Replicate %d: F_measure= %.4f; STDEV= %.4f; SE= %.4f" % (j+1, F_measure_cv_reps, sigma_cv_reps, SE_cv_reps))
+    
+    #Add score mean from the random balanced dataset replicate to the Rand_df_reps array. 
+    Rand_df_reps = np.insert(Rand_df_reps, 0, F_measure_cv_reps)
 
-    results_out.write('%s\t%.4f\t%.4f\t%.4f\n' % (j+1, F_measure_1, sigma_1, SE_1))
-    print("Replicate %d: F_measure= %.4f; STDEV= %.4f; SE= %.4f" % (j+1, F_measure_1, sigma_1, SE_1))
-    cv_means = np.insert(cv_means, 0, F_measure_1)
-
-  pd_imp = pd.DataFrame(imp, index=range(1,(num_df_to_run*num_cv_to_run+1)), columns=list(full_df)[1:])   #Turn importance array into df
+  #Output mean of the importance measure for each feature
+  pd_imp = pd.DataFrame(imp, index=range(1,(num_df*num_rep+1)), columns=feat_names)   #Turn importance array into df
   pd_imp_mean = pd_imp.mean(axis=0)                    #Find means for importance measure
   pd_imp_mean.to_csv(SAVE + "_imp.txt", sep='\t')
   
-  F_measure = np.mean(cv_means)
-  sigma = np.std(cv_means)
-  n=len(cv_means)
-  SE = np.std(cv_means)/sqrt(n)
+  #Calculate stats for the random dataframe replicates, write to the bottom of _RF_results.txt, add to RESULTS.txt, and print
+  F_measure = np.mean(Rand_df_reps)
+  sigma = np.std(Rand_df_reps)
+  SE = np.std(Rand_df_reps)/sqrt(num_df)
   #CI95 = stats.norm.interval(0.95, loc=F_measure, scale=sigma/np.sqrt(n))
-  n_features = len(var_names)
+  n_features = len(feat_names)
 
   results_out.write('\nNumber of features: %.1f' % (n_features))
   results_out.write('\nAverage\t%.4f\t%.4f\t%.4f' % (F_measure, sigma, SE))
-  open("RESULTS.txt",'a').write('%s\t%.1f\t%.1f\t%.1f\t%.4f\t%.4f\t%.4f\n' % (SAVE, n_features, num_df_to_run, num_cv_to_run, F_measure, sigma, SE))
-  print('Average: F measure: %.3f\nStandard Deviation: %.3f\nStandard Error: %.3f' % (F_measure, sigma, SE))
+  open("RESULTS.txt",'a').write('%s\t%i\t%i\t%i\t%i\t%i\t%i\t%.5f\t%.5f\t%.5f\n' % (SAVE, pos_size, all_neg.shape[0], n_features, num_df, num_rep, num_cv, F_measure, sigma, SE))
+  print('\nAverage: F measure: %.3f; stdev: %.3f; SE: %.3f' % (F_measure, sigma, SE))
+  print ('\nColumn Names in RESULTS.txt output: Run_Name, #Pos_Examples, #Neg_Examples, #Features, #Random_df_Reps, #CV_Reps, CV_Fold, F_measure, StDev, SE')
 
 #Make_DF(K, PVAL, SAVE)
 #RandomForest(pd_DF,SAVE)
