@@ -85,7 +85,8 @@ The work flow here is 1) Make df with all kmers/pairs. 2) Make list of enriched 
 
 ### At this point you can either run Random Forest on your dataframe using R (randomForest) via Step 4 or python (scikit_learn) via Step 5. 
 
-4. Run Random Forest in R. If randomForest is not in your library yet, see the end of this document.
+#### Run Random Forest in R. 
+If randomForest is not in your library yet, see *Getting RandomForest onto HPC.
   - export R_LIBS_USER=~/R/library
   - R --vanilla --slave --args [df*] < RandomForest.R
   - *Can use output df from step 1 or 3*
@@ -94,7 +95,7 @@ This will output two files:
   - .imp.txt: Open in exel, sort by "Mean Decrease Accuracy" - Make sure you shift the column headers over by one- they skip the motif name heading...
   - .Results.txt: Output with F-measure, stdev, sterror, and 95% confidence intervals.
 
-#### Getting RandomForest onto HPC:
+*Getting RandomForest onto HPC:
   - Rscript -e "install.packages(‘LIBRARY_NAME',lib='~/R/library',contriburl=contrib.url('http://cran.r-project.org/'))”
   - export R_LIBS_USER=~/R/library      *you will need to run this line every time you run RandomForest.R*
   - R
@@ -102,7 +103,8 @@ This will output two files:
   - library(“LIBRARY_NAME")
   - q()
 
-5. Run Random Forest in python: RF_scikit.py requires you to import the dataframe, designate the save name, and the code for the positive and negative example (defaults = 1, 0). The default scoring method is F-measure, but you can change it to AUC-ROC using '-score roc_auc'. The default is also to use all of the features (i.e. columns) in your dataframe, if you only want to use a subset (i.e. the most important from a previous run) import a txt file with the names of the features you want to use '-feat keep.txt'.
+#### Run Random Forest in python
+RF_scikit.py requires you to import the dataframe, designate the save name, and the code for the positive and negative example (defaults = 1, 0). The default scoring method is F-measure, but you can change it to AUC-ROC using '-score roc_auc'. The default is also to use all of the features (i.e. columns) in your dataframe, if you only want to use a subset (i.e. the most important from a previous run) import a txt file with the names of the features you want to use '-feat keep.txt'.
     - python /mnt/home/azodichr/GitHub/MotifDiscovery/RF_scikit.py -df [dataframe file] -pos [positive example name i.e. NNU] -neg [negative example name i.e. NNN] -save [save name]
 
 Example of short runcc.txt file to submit to hpc
