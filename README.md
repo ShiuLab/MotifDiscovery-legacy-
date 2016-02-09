@@ -1,5 +1,5 @@
 # MotifDiscovery
-Original pipeline used python for processing dataframes and R for running Random Forest. For those instructions see bottom of the document (Python & R Pipeline)
+Original pipeline used python for processing dataframes and R for running Random Forest. For those instructions see bottom of the document (Python & R Pipeline).
 
 New pipeline uses SciPy to determine enrichment, Numpy and Pandas for dataframe management, and SciKit Learn for RandomForest
 
@@ -13,18 +13,24 @@ Nov 13 2015 : Alter script so that enriched kmers are lengthened by 1 bp until t
 
 Oct 26 2015 : Switch from Python+R Pipeline to running everything in Python, this included changing to include reverse complement information, and to run the ML using 20 sets of random negative example genes. 
 
-## How to Run New Pipeline
+## Python Pipeline (most recent version)
 1. Anytime you log in to HPC and want to use the pipeline you have to first run:
     - export   PATH=/mnt/home/azodichr/miniconda3/bin:$PATH
-2. Import positive example and negative example FASTA files - the pipeline finds enriched kmers, lengthens kmers if possible, and runs 20 RandomForest models each with a different random negative set so that the ML is balanced. 
+
+Use Step 2 if: you have positive and negative examples and you want to find enriched motifs and run Random Forest in python.
+Use Step 3 if: you already have a dataframe set up (with Class as the 2nd column) and you want to run Random Forest in python on that dataframe.
+      
+2.  Import positive example and negative example FASTA files - the pipeline finds enriched kmers, lengthens kmers if possible, and runs 20 RandomForest models each with a different random negative set so that the ML is balanced. 
     - python /mnt/home/azodichr/GitHub/MotifDiscovery/RandomForest_v2.0.py -pos [FASTA FILE] -neg [FASTA FILE] -k /mnt/home/azodichr/ML_Python/6mers.txt (or 5mers.txt) -imp yes -save NAME -pval 0.01
 
 Example of short runcc.txt file to submit to hpc:
+    - /mnt/home/azodichr/01_DualStress_At/12_RF_Python/13_OneTailed/01_p01/runcc_clusters_01.txt
 
-•	/mnt/home/azodichr/01_DualStress_At/12_RF_Python/13_OneTailed/01_p01/runcc_clusters_01.txt
+3.  Import dataframe, designate the save name, code for the positive and negative example (defaults = 1, 0 respectively). The default scoring method is F-measure, but you can change it to AUC-ROC using '-score roc_auc'. The default is also to use all of the features (i.e. columns) in your dataframe, if you only want to use a subset (i.e. the most important from a previous run) import a txt file with the names of the features you want to use '-feat keep.txt'.
+    - python /mnt/home/azodichr/GitHub/MotifDiscovery/RF_scikit.py -df [dataframe file] -pos [positive example name i.e. NNU] -neg [negative example name i.e. NNN] -save [save name]
 
-
-
+Example of short runcc.txt file to submit to hpc
+    - /mnt/home/azodichr/01_DualStress_At/14_LogicClusters/03_Features/runcc_Fm.txt
 
 #Python & R Pipeline
 Pairwise_kmers.py: Contains functions to make lists of paired kmers, make data frames of what genes contain those motifs, and run Fisher's Exact test to determine enrichment of those kmers/kmer pairs in the positive genes. 
