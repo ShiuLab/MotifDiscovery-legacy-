@@ -25,8 +25,8 @@ import numpy as np
 import sys
 from math import sqrt
 
-neg = '0'
-pos = '1'
+neg = str(0)
+pos = str(1)
 SCORE = 'f1'    #Scoring method for RF, default F-measure, can change to AUC-ROC using -score roc_auc
 FEAT = 'all'    #Features to include from dataframe. Default = all (i.e. don't remove any from the given dataframe)
 
@@ -48,13 +48,15 @@ for i in range (1,len(sys.argv),2):
 def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
 
   from sklearn import cross_validation
-  from sklearn.preprocessing import LabelEncoder
   from sklearn.ensemble import RandomForestClassifier
   import scipy as stats
 
+  print(type(DF))
   #Load feature matrix and save feature names 
-  df = pd.read_csv(DF, sep='\t', index_col = 0)
-
+  if isinstance(DF, str):
+    df = pd.read_csv(DF, sep='\t', index_col = 0)
+  else:
+    df = DF
 
   #If features to keep list given, remove columns not in that list
   if FEAT != 'all':
@@ -67,6 +69,7 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
 
   #Recode class as 1 for positive and 0 for negative, then divide into two dataframes.
   df["Class"] = df['Class'].map({pos: 1, neg: 0})
+  print(df)
   all_pos = df[df.Class == 1]
   pos_size = all_pos.shape[0]
   all_neg = df[df.Class == 0]
@@ -142,5 +145,6 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
   print ('\nColumn Names in RESULTS.txt output: Run_Name, #Pos_Examples, #Neg_Examples, #Features, #Random_df_Reps, #CV_Reps, CV_Fold, F_measure, StDev, SE')
 
 
-RandomForest(DF, SAVE, SCORE, FEAT, pos, neg)
+if __name__ == "__main__":
+  RandomForest(DF, SAVE, SCORE, FEAT, pos, neg)
 
