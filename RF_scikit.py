@@ -66,7 +66,7 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
     df = df.loc[:,features]
   
   feat_names = list(df.columns.values)[1:]
-
+  print(df)
   #Recode class as 1 for positive and 0 for negative, then divide into two dataframes.
   df["Class"] = df['Class'].map({pos: 1, neg: 0})
   print(df)
