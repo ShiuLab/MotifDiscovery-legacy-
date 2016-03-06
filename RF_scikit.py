@@ -25,8 +25,8 @@ import numpy as np
 import sys
 from math import sqrt
 
-neg = str(0)
-pos = str(1)
+neg = 0
+pos = 1
 SCORE = 'f1'    #Scoring method for RF, default F-measure, can change to AUC-ROC using -score roc_auc
 FEAT = 'all'    #Features to include from dataframe. Default = all (i.e. don't remove any from the given dataframe)
 
