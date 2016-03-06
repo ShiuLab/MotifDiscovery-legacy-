@@ -25,24 +25,7 @@ import numpy as np
 import sys
 from math import sqrt
 
-neg = int(0)
-pos = int(1)
-SCORE = 'f1'    #Scoring method for RF, default F-measure, can change to AUC-ROC using -score roc_auc
-FEAT = 'all'    #Features to include from dataframe. Default = all (i.e. don't remove any from the given dataframe)
 
-for i in range (1,len(sys.argv),2):
-      if sys.argv[i] == "-score":
-        SCORE = sys.argv[i+1]
-      if sys.argv[i] == "-df":
-        DF = sys.argv[i+1]
-      if sys.argv[i] == '-save':
-        SAVE = sys.argv[i+1]
-      if sys.argv[i] == '-feat':
-        FEAT = sys.argv[i+1]
-      if sys.argv[i] == '-neg':
-        neg = sys.argv[i+1]
-      if sys.argv[i] == "-pos":
-        pos = sys.argv[i+1]
 
 
 def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
@@ -50,6 +33,25 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
   from sklearn import cross_validation
   from sklearn.ensemble import RandomForestClassifier
   import scipy as stats
+  
+  neg = 0
+  pos = 1
+  SCORE = 'f1'    #Scoring method for RF, default F-measure, can change to AUC-ROC using -score roc_auc
+  FEAT = 'all'    #Features to include from dataframe. Default = all (i.e. don't remove any from the given dataframe)
+
+  for i in range (1,len(sys.argv),2):
+        if sys.argv[i] == "-score":
+          SCORE = sys.argv[i+1]
+        if sys.argv[i] == "-df":
+          DF = sys.argv[i+1]
+        if sys.argv[i] == '-save':
+          SAVE = sys.argv[i+1]
+        if sys.argv[i] == '-feat':
+          FEAT = sys.argv[i+1]
+        if sys.argv[i] == '-neg':
+          neg = sys.argv[i+1]
+        if sys.argv[i] == "-pos":
+          pos = sys.argv[i+1]
 
   print(type(DF))
   #Load feature matrix and save feature names 
