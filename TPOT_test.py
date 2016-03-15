@@ -6,6 +6,7 @@ Testing TPOT [Tree-based Pipeline Optimization Tool] built by Randy Olson
 from tpot import TPOT
 import sys
 import pandas as pd
+import numpy as np
 from sklearn.datasets import load_digits  
 from sklearn.cross_validation import train_test_split  
   
@@ -18,7 +19,7 @@ for i in range (1,len(sys.argv),2):
 df = np.loadtxt(DF, skiprows=1, usecols=range(1,271))
 
 #df = pd.read_csv(DF, sep='\t',header=0, index_col=0)
-print(df.info())
+#print(df.info())
 y = df[:,0]
 x = df[:,1:]
  

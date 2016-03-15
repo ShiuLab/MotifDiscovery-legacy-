@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript 
-# Uses a presence/absence of motif(s) data frame to predict Class using RandomForest
-# and determine importance.
+# Uses a presence/absence of motif(s) data frame to make classification predictions using RandomForest
+# Importance of each feature is calculated from 1 run, whereas F-measure is calucated based on 10 fold cv and 10 replicates
+# Script does not create balanced P/N datasets, must do that manually.
 
 # USAGE
 # RandomForest.R [dataframe]
@@ -12,13 +13,13 @@ file <- cArgs[1]
 df <- read.table(file, header=TRUE, sep = "\t")
 df$Class <- as.factor(df$Class)
 
-"Calculating Importance..."
+#Calculating Importance...
 train_4importance <- randomForest(df[,c(3:length(df))], df$Class,ntree=500, importance = TRUE, do.trace=100)
 imp <- importance(train_4importance)
 savename <- sub('.txt','.imp.txt',file)
 write.table(imp, savename, sep="\t")
 
-"Calculating F measure..."
+#Calculating F measure- 10 replicates with 10 fold cross validation...
 reptimes = 10
 train <- replicate(reptimes, rfcv(df[,c(3:length(df))], df$Class, cv.fold=10, scale='log',step = .5, recursive=FALSE), simplify=FALSE)
 predicted.cv <- sapply(train, "[[", "predicted")
