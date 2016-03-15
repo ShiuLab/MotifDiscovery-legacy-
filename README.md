@@ -65,7 +65,7 @@ In HPC load:  Python3, Biopython, and SciPy
 
 Scripts: /mnt/home/azodichr/GitHub/MotifDiscovery/
 
-## Set Up Your Files:
+## 1. Set Up Your Files:
 1. Inside directory for Pairwise experiment make directories for FASTA files and Motif Lists:
   - mkdir FastaFiles
   - mkdir MotifLists
@@ -87,7 +87,7 @@ Scripts: /mnt/home/azodichr/GitHub/MotifDiscovery/
   - python Pairwise_kmers.py -f make_pairs2 –k 6
 
 
-## Make presence/absence dataframes and do enrichment
+## 2. Make presence/absence dataframes and do enrichment
 The work flow here is 1) Make df with all kmers/pairs. 2) Make list of enriched kmers/pairs. 3) Remake df with just those enriched kmers/pairs.
 
 1. Make data frame with presence or absence of all kmer/kmer pair:
@@ -101,9 +101,12 @@ The work flow here is 1) Make df with all kmers/pairs. 2) Make list of enriched 
 3. Re-make data frame with only enriched motifs:
   - python Pairwise_kmers.py -f make_df –k [output from step 6, ending in: “_sig_0.05.txt”] -p [positive fasta files] -n [negative fasta files]
 
-#### At this point you can either run Random Forest on your dataframe using R (see below) via Step 4 or in python (follow 'If you want to make a data table and run RandomForest in one step' in the Python Pipeline above)
+## 3. Run Random Forest
+####Method 1: Using scikit learn in python 
+See 'If you want to make a data table and run RandomForest in one step' in the Python Pipeline above
 
-#### Run Random Forest in R. 
+####Method 2: Using R
+
 If randomForest is not in your library yet, see *Getting RandomForest onto HPC.
   - export R_LIBS_USER=~/R/library
   - R --vanilla --slave --args [df*] < RandomForest.R
