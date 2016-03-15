@@ -5,31 +5,50 @@ New pipeline uses SciPy to determine enrichment, Numpy and Pandas for dataframe 
 
 ## Updates to the Pipeline:
 March 6 2016 : Change RandomForest_v2.0.py to call the random forest script from RF_scikit.py. That way ML runs are consistent between methods.
+
 Febrary 2 2016 : Add RF scikit.py. Which allows you to run RF ML on any dataframe given. Can select scoring type ('f1' = F-measure; 'roc_auc' = AUC-ROC  : default = f1) and give list of features to include (default is to use the whole dataframe)
+
 Nov 25 2015 : Simplify and standardize outputs (gives stdev and SE), also changed the random_state generator in RandomForestClassifier from an int to the default which is np.random.
+
 Nov 24 2015 : Make Fisher's Exact Test 1-Tailed (only looking at enrichment in positive class) & remove Training/Testing data split since using cross-validation
+
 Nov 13 2015 : Alter script so that enriched kmers are lengthened by 1 bp until they are no longer enriched
+
 Oct 26 2015 : Switch from Python+R Pipeline to running everything in Python, this included changing to include reverse complement information, and to run the ML using 20 sets of random negative example genes. 
 
 ## Python Pipeline (most recent version)
-1. Anytime you log in to HPC and want to use the pipeline you have to first run:
-    - export   PATH=/mnt/home/azodichr/miniconda3/bin:$PATH
+*Anytime you log in to HPC and want to use the pipeline you have to first run:
 
-Use Step 2 if: you have positive and negative examples and you want to find enriched motifs and run Random Forest in python.
-Use Step 3 if: you already have a dataframe set up (with Class as the 2nd column) and you want to run Random Forest in python on that dataframe.
-      
-2.  Import positive example and negative example FASTA files - the pipeline finds enriched kmers, lengthens kmers if possible, and runs 20 RandomForest models each with a different random negative set so that the ML is balanced. 
-    - python /mnt/home/azodichr/GitHub/MotifDiscovery/RandomForest_v2.0.py -pos [FASTA FILE] -neg [FASTA FILE] -k /mnt/home/azodichr/ML_Python/6mers.txt (or 5mers.txt) -imp yes -save NAME -pval 0.01
+    export   PATH=/mnt/home/azodichr/miniconda3/bin:$PATH
 
-Example of short runcc.txt file to submit to hpc:
-    - /mnt/home/azodichr/01_DualStress_At/12_RF_Python/13_OneTailed/01_p01/runcc_clusters_01.txt
+####If you already have your data table made (make sure Class is the 2nd column):
 
-3.  RF_scikit.py requires you to import the dataframe, designate the save name, and the code for the positive and negative example (defaults = 1, 0). The default scoring method is F-measure, but you can change it to AUC-ROC using '-score roc_auc'. The default is also to use all of the features (i.e. columns) in your dataframe, if you only want to use a subset (i.e. the most important from a previous run) import a txt file with the names of the features you want to use '-feat keep.txt'.
+RF_scikit.py requires you to import the dataframe, designate the save name, and the code for the positive and negative example (defaults = 1, 0). The default scoring method is F-measure, but you can change it to AUC-ROC using '-score roc_auc'. The default is also to use all of the features (i.e. columns) in your dataframe, if you only want to use a subset (i.e. the most important from a previous run) import a txt file with the names of the features you want to use '-feat keep.txt'.
 
-python /mnt/home/azodichr/GitHub/MotifDiscovery/RF_scikit.py -df [dataframe file] -pos [positive example name i.e. NNU] -neg [negative example name i.e. NNN] -save [save name]
+    python /mnt/home/azodichr/GitHub/MotifDiscovery/RF_scikit.py -df [dataframe file] -pos [positive example name i.e. NNU] -neg [negative example name i.e. NNN] -save [save name]
 
 Example of short runcc.txt file to submit to hpc
-    - /mnt/home/azodichr/01_DualStress_At/14_LogicClusters/03_Features/runcc_Fm.txt
+
+    /mnt/home/azodichr/01_DualStress_At/14_LogicClusters/03_Features/runcc_Fm.txt
+
+####If you want to make a data table and run RandomForest in one step:
+      
+To run RandomForest_v2.0.py you need to import positive example and negative example FASTA files, a list of kmers to start searching with, and a save name. Once enriched kmers are detected, the script will lengthen the kmers all the way up to k+6 to test for enrichement of larger kmers. Finally it will create a data table and call RF_scikit.py to run balanced Random Forest. 
+
+    python /mnt/home/azodichr/GitHub/MotifDiscovery/RandomForest_v2.0.py -pos_file [FASTA FILE] -neg_file [FASTA FILE] -k [kmer list]  -save [UniqueSaveName]
+
+Optional inputs:
+
+    -pos: string for what codes for the positive example (Default = 1)
+    -neg: string for what codes for the negative example (Default = 0)
+    -pval: Default = 0.01
+    -score: Can change to roc_auc to get AUCROC values (Default = f1) f1 = F-measure
+    -feat: txt file with list of features you want to use in RF (i.e. most important features from previous run) Default = all
+
+Example of short runcc.txt file to submit to hpc:
+
+    /mnt/home/azodichr/01_DualStress_At/12_RF_Python/13_OneTailed/01_p01/runcc_clusters_01.txt
+
 
 #Old Python & R Pipeline (useful for doing paired kmer enrichment)
 Pairwise_kmers.py: Contains functions to make lists of paired kmers, make data frames of what genes contain those motifs, and run Fisher's Exact test to determine enrichment of those kmers/kmer pairs in the positive genes. 
@@ -82,7 +101,7 @@ The work flow here is 1) Make df with all kmers/pairs. 2) Make list of enriched 
 3. Re-make data frame with only enriched motifs:
   - python Pairwise_kmers.py -f make_df –k [output from step 6, ending in: “_sig_0.05.txt”] -p [positive fasta files] -n [negative fasta files]
 
-### At this point you can either run Random Forest on your dataframe using R (see below) via Step 4 or in python (follow step 3 in the Python Pipeline- most recent version)
+#### At this point you can either run Random Forest on your dataframe using R (see below) via Step 4 or in python (follow 'If you want to make a data table and run RandomForest in one step' in the Python Pipeline above)
 
 #### Run Random Forest in R. 
 If randomForest is not in your library yet, see *Getting RandomForest onto HPC.
