@@ -341,7 +341,7 @@ class Kmer_pairs:
 		for kmer in pos_pres:
 			try:
 				count += 1 
-				oddsratio,pvalue = stats.fisher_exact([[pos_pres[kmer],(num_genes-pos_pres[kmer])],[neg_pres[kmer],(num_genes-neg_pres[kmer])]])
+				oddsratio,pvalue = stats.fisher_exact([[pos_pres[kmer],(num_genes-pos_pres[kmer])],[neg_pres[kmer],(num_genes-neg_pres[kmer])]],alternative='greater')
 				outFISH.write(kmer + "\t" +str(pos_pres[kmer])+"\t"+ str(neg_pres[kmer])+ "\t"+ str(pvalue)+"\n")
 				#if pvalue <= pval:
 					#outSIG.write(kmer+"\n")
