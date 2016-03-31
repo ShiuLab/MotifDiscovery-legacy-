@@ -61,7 +61,9 @@ RandomForest.R: Runs Random Forest on input dataframe. 10 replicates and 10 fold
 
 If you already have fasta files of positive and neg examples, skip steps 2-3.
 
-In HPC load:  Python3, Biopython, and SciPy
+*Anytime you log in to HPC and want to use the pipeline you have to first run:
+
+    export   PATH=/mnt/home/azodichr/miniconda3/bin:$PATH
 
 Scripts: /mnt/home/azodichr/GitHub/MotifDiscovery/
 
