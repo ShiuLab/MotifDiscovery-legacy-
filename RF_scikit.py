@@ -17,7 +17,8 @@ INPUT:
 OUTPUT:
   -SAVE_RF_results.txt    Results from RF runs
   -SAVE_imp.txt           Importance scores for each feature
-  -RESULTS.txt            Final results get added to this file: Run Name, #Pos Examples, #Neg Examples, # Features, # Reps (different Neg Datasets), #CV Reps, CV Fold, F_measure, StDev, SE
+  -RESULTS.txt            Final results get added to this file: Run Name, #Pos Examples,
+                               #Neg Examples, # Features, # Reps (different Neg Datasets), #CV Reps, CV Fold, F_measure, StDev, SE
 """
 
 import pandas as pd
@@ -34,24 +35,9 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
   from sklearn.ensemble import RandomForestClassifier
   import scipy as stats
   
-  neg = 0
-  pos = 1
-  SCORE = 'f1'    #Scoring method for RF, default F-measure, can change to AUC-ROC using -score roc_auc
-  FEAT = 'all'    #Features to include from dataframe. Default = all (i.e. don't remove any from the given dataframe)
+  
 
-  for i in range (1,len(sys.argv),2):
-        if sys.argv[i] == "-score":
-          SCORE = sys.argv[i+1]
-        if sys.argv[i] == "-df":
-          DF = sys.argv[i+1]
-        if sys.argv[i] == '-save':
-          SAVE = sys.argv[i+1]
-        if sys.argv[i] == '-feat':
-          FEAT = sys.argv[i+1]
-        if sys.argv[i] == '-neg':
-          neg = sys.argv[i+1]
-        if sys.argv[i] == "-pos":
-          pos = sys.argv[i+1]
+
 
   print(type(DF))
   #Load feature matrix and save feature names 
@@ -148,5 +134,26 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
 
 
 if __name__ == "__main__":
+  
+  #Default parameters
+  neg = 0
+  pos = 1
+  SCORE = 'f1'    #Scoring method for RF, default F-measure, can change to AUC-ROC using -score roc_auc
+  FEAT = 'all'    #Features to include from dataframe. Default = all (i.e. don't remove any from the given dataframe)
+  
+  for i in range (1,len(sys.argv),2):
+        if sys.argv[i] == "-score":
+          SCORE = sys.argv[i+1]
+        if sys.argv[i] == "-df":
+          DF = sys.argv[i+1]
+        if sys.argv[i] == '-save':
+          SAVE = sys.argv[i+1]
+        if sys.argv[i] == '-feat':
+          FEAT = sys.argv[i+1]
+        if sys.argv[i] == '-neg':
+          neg = sys.argv[i+1]
+        if sys.argv[i] == "-pos":
+          pos = sys.argv[i+1]
+  
   RandomForest(DF, SAVE, SCORE, FEAT, pos, neg)
 
