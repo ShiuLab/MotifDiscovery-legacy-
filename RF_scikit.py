@@ -34,10 +34,27 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
   from sklearn import cross_validation
   from sklearn.ensemble import RandomForestClassifier
   import scipy as stats
+  """
+  #Default parameters
+  neg = 0
+  pos = 1
+  SCORE = 'f1'    #Scoring method for RF, default F-measure, can change to AUC-ROC using -score roc_auc
+  FEAT = 'all'    #Features to include from dataframe. Default = all (i.e. don't remove any from the given dataframe)
   
-  
-
-
+  for i in range (1,len(sys.argv),2):
+        if sys.argv[i] == "-score":
+          SCORE = sys.argv[i+1]
+        if sys.argv[i] == "-df":
+          DF = sys.argv[i+1]
+        if sys.argv[i] == '-save':
+          SAVE = sys.argv[i+1]
+        if sys.argv[i] == '-feat':
+          FEAT = sys.argv[i+1]
+        if sys.argv[i] == '-neg':
+          neg = sys.argv[i+1]
+        if sys.argv[i] == "-pos":
+          pos = sys.argv[i+1]
+  """
 
   print(type(DF))
   #Load feature matrix and save feature names 
@@ -52,12 +69,15 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
       features = f.read().splitlines()
       features = ['Class'] + features
     df = df.loc[:,features]
-  
+
   feat_names = list(df.columns.values)[1:]
   print(df)
   #Recode class as 1 for positive and 0 for negative, then divide into two dataframes.
-  df["Class"] = df['Class'].map({pos: 1, neg: 0})
+  df["Class"] = df["Class"].replace(pos, 1)
+  df["Class"] = df["Class"].replace(neg, 0)
+
   print(df)
+
   all_pos = df[df.Class == 1]
   pos_size = all_pos.shape[0]
   all_neg = df[df.Class == 0]
@@ -70,7 +90,7 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
   m = 0 
   num_df = 50        #Number of random balanced replicates (Rand_df_reps)
   num_rep = 10       #Number of CV replicates (cv_reps)
-  num_cv = 10       #Cross validation fold
+  num_cv = 10        #Cross validation fold
 
 
   #Make empty array to save score from each random balanced replicate. Size = num_df
@@ -135,9 +155,10 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
 
 if __name__ == "__main__":
   
+  print("__name__  = " + str(__name__))
   #Default parameters
-  neg = 0
-  pos = 1
+  neg = int(0)
+  pos = int(1)
   SCORE = 'f1'    #Scoring method for RF, default F-measure, can change to AUC-ROC using -score roc_auc
   FEAT = 'all'    #Features to include from dataframe. Default = all (i.e. don't remove any from the given dataframe)
   
@@ -154,6 +175,6 @@ if __name__ == "__main__":
           neg = sys.argv[i+1]
         if sys.argv[i] == "-pos":
           pos = sys.argv[i+1]
-  
+
   RandomForest(DF, SAVE, SCORE, FEAT, pos, neg)
 
