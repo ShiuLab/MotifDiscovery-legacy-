@@ -51,7 +51,7 @@ for i in range (1,len(sys.argv),2):
         neg = sys.argv[i+1]
       if sys.argv[i] == "-pos":              #String for positive class : Default = 1
         pos = sys.argv[i+1]
-      if sys.argv[i] == '-pval':        #Default is 0.05
+      if sys.argv[i] == '-pval':             #Default is 0.01
         PVAL = float(sys.argv[i+1])
       if sys.argv[i] == '-save':
         SAVE = sys.argv[i+1]
@@ -135,7 +135,7 @@ def Find_Enrich(POS, NEG, km, PVAL, SAVE):
           gene_array = np.append(gene_array, 0)
     dataframe = np.vstack((dataframe,gene_array))
 
-  DF= pd.DataFrame(dataframe, index=genes, columns=numpy_header, dtype=int)  # Turn numpy into pandas DF
+  DF= pd.DataFrame(dataframe, index=genes, columns=numpy_header, dtype=int)  # , dtype=int # Turn numpy into pandas DF
   DF= DF.drop("Skip_this_line",0)
 
   
@@ -269,7 +269,9 @@ def Make_DF(K, PVAL, SAVE):
   n_features = DF.shape[1]-2
   print('%d kmers enriched at p = %s' % (n_features, PVAL))
   enriched_name = SAVE + "_df_p" + str(PVAL) + ".txt"
-  #DF.to_csv(enriched_name, sep='\t')
+  DF["Class"] = DF["Class"].replace(1, pos)
+  DF["Class"] = DF["Class"].replace(0, neg)
+  DF.to_csv(enriched_name, sep='\t')
   return(DF)
 
 
