@@ -41,9 +41,10 @@ To run RandomForest_v2.0.py you need to import positive example and negative exa
 
 Optional inputs:
 
-    -pos: string for what codes for the positive example (Default = 1)
+    -pos: string for what codes for the positive example (Default = 1) (useful if you're later going to combine data sets for multiclass predictions)
     -neg: string for what codes for the negative example (Default = 0)
     -pval: Default = 0.01
+    -FDR: Default = N (optional Y). Benjamini & Hochberg FDR correction for kmer enrichment.
     -score: Can change to roc_auc to get AUCROC values (Default = f1) f1 = F-measure
     -feat: txt file with list of features you want to use in RF (i.e. most important features from previous run) Default = all
 
