@@ -16,6 +16,7 @@ INPUT:
   -save     Save name (will overwrite results files if the same as other names in the directory youre exporting to)
   -score    Default: F-measure. Can change to AUC-ROC using "-score roc_auc"
   -feat     Default: all (i.e. everything in the dataframe given). Can import txt file with list of features to keep.
+  -FDR      Default: N. Designate (Y/N) if you want to run FDR correction during enrichment test
 
 
 OUTPUT:
@@ -29,7 +30,7 @@ OUTPUT:
 
 import pandas as pd
 import numpy as np
-import sys
+import sys, os
 import timeit
 from math import sqrt
 import RF_scikit
@@ -40,6 +41,7 @@ FEAT = 'all'    #Features to include from dataframe. Default = all (i.e. don't r
 SCORE = 'f1'
 neg = '0'
 pos = '1'
+FDR = 'N'
 
 for i in range (1,len(sys.argv),2):
 
@@ -61,13 +63,19 @@ for i in range (1,len(sys.argv),2):
         K = sys.argv[i+1]
       if sys.argv[i] == "-score":
         SCORE = sys.argv[i+1]
+      if sys.argv[i] == "-FDR":
+        FDR = sys.argv[i+1]
 
 
 def Find_Enrich(POS, NEG, km, PVAL, SAVE):
   from Bio import SeqIO
   from Bio.Seq import Seq
   from scipy.stats import fisher_exact
-  
+
+  #from rpy2.robjects.packages import importr
+  #from rpy2.robjects.vectors import FloatVector
+  #import rpy2
+
   numpy_header = ['Class']
   
   for i in km:
@@ -115,7 +123,7 @@ def Find_Enrich(POS, NEG, km, PVAL, SAVE):
     header = seq_record.id
     genes.append(header)
     seq = str(seq_record.seq)         
-    gene_array =np.array([0])       # Array of P/A (1/0) for each gene - starts with '0' For Negative Class
+    gene_array =np.array([0])               # Array of P/A (1/0) for each gene - starts with '0' For Negative Class
     for ki in km:
       if " " in ki:                         #Checks to see if motif is a pair - pairs are separated by a space
         k1 = Seq(ki.split(" ")[0])
@@ -145,26 +153,75 @@ def Find_Enrich(POS, NEG, km, PVAL, SAVE):
   count = 0
   
   enriched_kmers = {}
-  for k in positive_present:
-    try:
-      count += 1
-      TP = positive_present[k]            #Positive Examples with kmer present
-      FP = negative_present[k]            #Negative Examples with kmer present
-      TN = num_neg-negative_present[k]    #Negative Examples without kmer
-      FN = num_pos-positive_present[k]    #Positive Examples without kmer
 
-      oddsratio,pvalue = fisher_exact([[TP,FN],[FP,TN]],alternative='greater')
-      outFISH.write('\n%s\t%d\t%d\t%.7f' % (k, (positive_present[k]),(negative_present[k]),pvalue))
-      if pvalue <= PVAL:          # Remove unenriched features from dataframe
-        enriched_kmers[k] = pvalue
-      if pvalue > PVAL:
-        DF = DF.drop(k, 1)
-      if count%10000==0:
-        print("Completed " + str(count) + " features")
+  if FDR == "N":
+    for k in positive_present:
+      try:
+        count += 1
+        TP = positive_present[k]            #Positive Examples with kmer present
+        FP = negative_present[k]            #Negative Examples with kmer present
+        TN = num_neg-negative_present[k]    #Negative Examples without kmer
+        FN = num_pos-positive_present[k]    #Positive Examples without kmer
 
-    except ValueError:
-      count += 1 
-      outFISH.write('\n%s\t%d\t%d\t1.0' % (k, (positive_present[k]),(negative_present[k])))
+        oddsratio,pvalue = fisher_exact([[TP,FN],[FP,TN]],alternative='greater')
+        outFISH.write('\n%s\t%d\t%d\t%.7f' % (k, (positive_present[k]),(negative_present[k]),pvalue))
+        if pvalue <= PVAL:          # Remove unenriched features from dataframe
+          enriched_kmers[k] = pvalue
+        if pvalue > PVAL:
+          DF = DF.drop(k, 1)
+        if count%10000==0:
+          print("Completed " + str(count) + " features")
+
+      except ValueError:
+        count += 1 
+        outFISH.write('\n%s\t%d\t%d\t1.0' % (k, (positive_present[k]),(negative_present[k])))
+
+  elif FDR == "Y":
+    fdr_dict = {}
+    for k in positive_present:
+      try:
+        count += 1
+        TP = positive_present[k]            #Positive Examples with kmer present
+        FP = negative_present[k]            #Negative Examples with kmer present
+        TN = num_neg-negative_present[k]    #Negative Examples without kmer
+        FN = num_pos-positive_present[k]    #Positive Examples without kmer
+
+        oddsratio,pvalue = fisher_exact([[TP,FN],[FP,TN]],alternative='greater')
+        outFISH.write('\n%s\t%d\t%d\t%.7f' % (k, (positive_present[k]),(negative_present[k]),pvalue))
+        pvalue_i = str(pvalue)
+        fdr_dict[k] = pvalue_i
+
+      except ValueError:
+        count += 1 
+        outFISH.write('\n%s\t%d\t%d\t1.0' % (k, (positive_present[k]),(negative_present[k])))
+    
+    outFISH.close()
+    f_path = os.getcwd()+ "/" + SAVE + "_FETresults.txt"
+    
+    R=('R --vanilla --slave --args '+ os.getcwd() + " " + SAVE + " " + f_path+'< /mnt/home/azodichr/GitHub/MotifDiscovery/FDR.R')
+    os.system(R)
+    
+    fdr_file = os.getcwd() +"/" + SAVE + "_FETresults_FDR.csv"
+
+    for l in open(fdr_file,'r'):
+      if "feature" in l:
+            pass
+      else:
+        kmer, poscount, negcount, pval, adjp = l.strip().split(",")
+        if float(adjp) <= PVAL:          #Remove unenriched features from dataframe
+          enriched_kmers[kmer] = adjp
+        elif float(adjp) > PVAL:
+          DF = DF.drop(kmer, 1)
+        if count%10000==0:
+          print("Completed " + str(count) + " features")
+    
+    #stats = rpy2.robjects.packages.importr('stats')
+    #p_adjust = stats['p.adjust'](rpy2.robjects.vectors.FloatVector(pvals), method = 'BH')
+
+  else:
+    print("Please include ''-FDR Y/N'' in command to designate if you want FDR correction")
+
+
   return(DF, enriched_kmers)
 
 
