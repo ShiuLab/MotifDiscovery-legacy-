@@ -4,6 +4,8 @@ Original pipeline used python for processing dataframes and R for running Random
 New pipeline uses SciPy to determine enrichment, Numpy and Pandas for dataframe management, and SciKit Learn for RandomForest
 
 ## Updates to the Pipeline:
+May 19 2016 : Added option to run multiple test correction during kmer enrichment. Add "-FDR Y" to your command line to do so.
+
 April 27 2016 : Added MapEnrichedKmers.py to directory. This is the starting point for incorporating DAP-Seq data into the pipeline. Script is being actively developed by cbazodi and will likely be renamed!
 
 March 6 2016 : Change RandomForest_v2.0.py to call the random forest script from RF_scikit.py. That way ML runs are consistent between methods.
