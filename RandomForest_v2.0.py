@@ -26,8 +26,6 @@ OUTPUT:
   -RESULTS.txt            Final results get added to this file: Run Name, # Features, # Reps (different Neg Datasets), CV, F_measure, StDev, SE
 """
 
-
-
 import pandas as pd
 import numpy as np
 import sys, os
@@ -45,26 +43,27 @@ FDR = 'N'
 
 for i in range (1,len(sys.argv),2):
 
-      if sys.argv[i] == '-pos_file':         #Fasta file for positive examples
-        POS = sys.argv[i+1]
-      if sys.argv[i] == '-neg_file':         #Fasta file for negative examples
-        NEG = sys.argv[i+1]
-      if sys.argv[i] == '-neg':              #String for negative class : Default = 0
-        neg = sys.argv[i+1]
-      if sys.argv[i] == "-pos":              #String for positive class : Default = 1
-        pos = sys.argv[i+1]
-      if sys.argv[i] == '-pval':             #Default is 0.01
-        PVAL = float(sys.argv[i+1])
-      if sys.argv[i] == '-save':
-        SAVE = sys.argv[i+1]
-      if sys.argv[i] == '-feat':
-        FEAT = sys.argv[i+1]
-      if sys.argv[i] == '-k':
-        K = sys.argv[i+1]
-      if sys.argv[i] == "-score":
-        SCORE = sys.argv[i+1]
-      if sys.argv[i] == "-FDR":
-        FDR = sys.argv[i+1]
+  if sys.argv[i] == '-pos_file':         #Fasta file for positive examples
+    POS = sys.argv[i+1]
+  if sys.argv[i] == '-neg_file':         #Fasta file for negative examples
+    NEG = sys.argv[i+1]
+  if sys.argv[i] == '-neg':              #String for negative class : Default = 0
+    neg = sys.argv[i+1]
+  if sys.argv[i] == "-pos":              #String for positive class : Default = 1
+    pos = sys.argv[i+1]
+  if sys.argv[i] == '-pval':             #Default is 0.01
+    PVAL = float(sys.argv[i+1])
+  if sys.argv[i] == '-save':
+    SAVE = sys.argv[i+1]
+  if sys.argv[i] == '-feat':
+    FEAT = sys.argv[i+1]
+  if sys.argv[i] == "-fdr":
+    FDR = sys.argv[i+1]
+  if sys.argv[i] == '-k':
+    K = sys.argv[i+1]
+  if sys.argv[i] == "-score":
+    SCORE = sys.argv[i+1]
+
 
 
 def Find_Enrich(POS, NEG, km, PVAL, SAVE):
@@ -77,7 +76,6 @@ def Find_Enrich(POS, NEG, km, PVAL, SAVE):
   #import rpy2
 
   numpy_header = ['Class']
-  
   for i in km:
     numpy_header.append(i)  
   
@@ -214,9 +212,6 @@ def Find_Enrich(POS, NEG, km, PVAL, SAVE):
           DF = DF.drop(kmer, 1)
         if count%10000==0:
           print("Completed " + str(count) + " features")
-    
-    #stats = rpy2.robjects.packages.importr('stats')
-    #p_adjust = stats['p.adjust'](rpy2.robjects.vectors.FloatVector(pvals), method = 'BH')
 
   else:
     print("Please include ''-FDR Y/N'' in command to designate if you want FDR correction")

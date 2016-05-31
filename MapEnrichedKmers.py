@@ -60,6 +60,8 @@ class DAP_Seq:
             neg_kmers[kmer].append(loci)
     print(pos_kmers)
 
+    
+
     #Load bed file
 
     #For each kmer record the highest, lowest, and average availability amongst the genes in the pos vs. neg list. Calculate mean dif. 
@@ -98,7 +100,7 @@ class DAP_Seq:
         pass
         #print(df[column])
     
-    #df.to_csv("all_DAP_sites_ca1k2_NUN_df.txt", sep="\t", index=False)
+    df.to_csv("all_DAP_sites_co2k4_NND_df.txt", sep="\t", index=False)
 
 
 
@@ -135,4 +137,6 @@ if __name__ == '__main__':
     if "" in [DAP, POS, NEG]:
       print("Need df, path, pos, and neg")
     DAP_Seq.all_DAP_sites(DAP, POS, NEG)
+
+
 

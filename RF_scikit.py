@@ -27,36 +27,15 @@ import sys
 from math import sqrt
 
 
-
-
 def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
 
   from sklearn import cross_validation
   from sklearn.ensemble import RandomForestClassifier
+  from sklearn.metrics import f1_score
+  from sklearn import metrics
   import scipy as stats
-  """
-  #Default parameters
-  neg = 0
-  pos = 1
-  SCORE = 'f1'    #Scoring method for RF, default F-measure, can change to AUC-ROC using -score roc_auc
-  FEAT = 'all'    #Features to include from dataframe. Default = all (i.e. don't remove any from the given dataframe)
-  
-  for i in range (1,len(sys.argv),2):
-        if sys.argv[i] == "-score":
-          SCORE = sys.argv[i+1]
-        if sys.argv[i] == "-df":
-          DF = sys.argv[i+1]
-        if sys.argv[i] == '-save':
-          SAVE = sys.argv[i+1]
-        if sys.argv[i] == '-feat':
-          FEAT = sys.argv[i+1]
-        if sys.argv[i] == '-neg':
-          neg = sys.argv[i+1]
-        if sys.argv[i] == "-pos":
-          pos = sys.argv[i+1]
-  """
 
-  print(type(DF))
+
   #Load feature matrix and save feature names 
   if isinstance(DF, str):
     df = pd.read_csv(DF, sep='\t', index_col = 0)
@@ -71,12 +50,13 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
     df = df.loc[:,features]
 
   feat_names = list(df.columns.values)[1:]
-  print(df)
+  n_features = len(feat_names)
+  
+  print(n_features)
+  #print(df)
   #Recode class as 1 for positive and 0 for negative, then divide into two dataframes.
   df["Class"] = df["Class"].replace(pos, 1)
   df["Class"] = df["Class"].replace(neg, 0)
-
-  print(df)
 
   all_pos = df[df.Class == 1]
   pos_size = all_pos.shape[0]
@@ -102,7 +82,7 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
     #Make balanced dataset with random negative examples drawn
     random_neg = all_neg.sample(n=pos_size)                       #take random subset of negative examples - same size as positive
     df = pd.DataFrame.merge(all_pos, random_neg, how = 'outer')   #Make balanced dataframe
-    y = df.iloc[:,0].values                                       #Designate Column with class information
+    y = df.iloc[:,0].values                                       #Designate Column with class labels
     x = df.iloc[:,1:].values                                      #Designate Columns with variable information
     
     #Make an empty array to save scores each CV replicate. Size = num_rep
@@ -111,11 +91,23 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
     #Run 'num_rep' replicates of the CV run. 
     for i in range(num_rep):                       
       m += 1
-      forest = RandomForestClassifier(criterion='entropy',n_estimators=500, n_jobs=8)         #Define the type of model
-      forest = forest.fit(x, y)                                                               #Train the model
-      scores = cross_validation.cross_val_score(forest, x, y, cv=num_cv, scoring=SCORE)     #Make predictions with CV
-      cv_reps = np.insert(cv_reps, 0, np.mean(scores))
+      #Define the model
+      forest = RandomForestClassifier(criterion='entropy', max_features= round(sqrt(n_features)), n_estimators=500, n_jobs=8)
+      #Train the model
+      forest = forest.fit(x, y)
+      
+      #To get the predicted class of the imput sample from model with no CV (ie. highest mean probability estimate across trees)
+      #print("Real class: %s" % y)
+      #print("Predicted_no CV: %s" % str(forest.predict(x)))
+      #print('F1-score_no CV: %f'% f1_score(y, forest.predict(x)))
+      
+      scores = cross_validation.cross_val_score(forest, x, y=y, cv=num_cv, scoring = SCORE)     #Make predictions with CV
+      cv_reps = np.insert(cv_reps, 0, scores.mean())
 
+      #To get the predicted class of the imput sample from CV model (ie. highest mean probability estimate across trees)
+      #pred = cross_validation.cross_val_predict(forest, x, y=y, cv=num_cv)
+      #print("CV prediction: %s" % pred)
+      
       #Add importance values to imp array
       importances = forest.feature_importances_
       if m == 1:
@@ -144,7 +136,7 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
   sigma = np.std(Rand_df_reps)
   SE = np.std(Rand_df_reps)/sqrt(num_df)
   #CI95 = stats.norm.interval(0.95, loc=F_measure, scale=sigma/np.sqrt(n))
-  n_features = len(feat_names)
+  
 
   results_out.write('\nNumber of features: %.1f' % (n_features))
   results_out.write('\nAverage\t%.4f\t%.4f\t%.4f' % (F_measure, sigma, SE))
@@ -155,7 +147,7 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
 
 if __name__ == "__main__":
   
-  print("__name__  = " + str(__name__))
+  #print("__name__  = " + str(__name__))
   #Default parameters
   neg = int(0)
   pos = int(1)
