@@ -8,6 +8,7 @@ Must set path to Miniconda in HPC:  export PATH=/mnt/home/azodichr/miniconda3/bi
 
 INPUT:
   -df       Feature dataframe for ML. Format -> Col 1 = example.name, Col 2 = Class, Col 3-... = Features.
+  -n        Number of draws on negative data set you would like to run. Default = 50
   -save     Save name (will overwrite some results files if the same as other names in the directory youre exporting to)
   -pos      String for what codes for the positive example (i.e. UUN) Default = 1
   -neg      String for what codes for the negative example (i.e. NNN) Default = 0
@@ -27,7 +28,7 @@ import sys
 from math import sqrt
 
 
-def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
+def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg, n):
 
   from sklearn import cross_validation
   from sklearn.ensemble import RandomForestClassifier
@@ -52,8 +53,6 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
   feat_names = list(df.columns.values)[1:]
   n_features = len(feat_names)
   
-  print(n_features)
-  #print(df)
   #Recode class as 1 for positive and 0 for negative, then divide into two dataframes.
   df["Class"] = df["Class"].replace(pos, 1)
   df["Class"] = df["Class"].replace(neg, 0)
@@ -68,10 +67,9 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
   results_out.write('Dataframe_Rep\tF_measure\tSTDEV\tSE')
 
   m = 0 
-  num_df = 50        #Number of random balanced replicates (Rand_df_reps)
+  num_df = n        #Number of random balanced replicates (Rand_df_reps)
   num_rep = 10       #Number of CV replicates (cv_reps)
-  num_cv = 10        #Cross validation fold
-
+  num_cv = 5        #Cross validation fold
 
   #Make empty array to save score from each random balanced replicate. Size = num_df
   Rand_df_reps = np.array([])
@@ -100,13 +98,22 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg):
       #print("Real class: %s" % y)
       #print("Predicted_no CV: %s" % str(forest.predict(x)))
       #print('F1-score_no CV: %f'% f1_score(y, forest.predict(x)))
+
+      #Set up cross validation sets:
+      kf_total = cross_validation.KFold(len(x), n_folds = num_cv, shuffle = True, random_state = 5)
+      #for train, test in kf_total:
+        #print("%s\n%s\n\n" % (train, test))
       
-      scores = cross_validation.cross_val_score(forest, x, y=y, cv=num_cv, scoring = SCORE)     #Make predictions with CV
+      # Make classification using cross validation
+      scores = cross_validation.cross_val_score(forest, x, y=y, cv=kf_total, scoring = SCORE)     #Make predictions with CV
       cv_reps = np.insert(cv_reps, 0, scores.mean())
+      print(scores)
+      print(scores.mean())
+      
 
       #To get the predicted class of the imput sample from CV model (ie. highest mean probability estimate across trees)
-      #pred = cross_validation.cross_val_predict(forest, x, y=y, cv=num_cv)
-      #print("CV prediction: %s" % pred)
+      pred = cross_validation.cross_val_predict(forest, x, y=y, cv=num_cv)
+      print("CV prediction: %s" % pred)
       
       #Add importance values to imp array
       importances = forest.feature_importances_
@@ -151,6 +158,7 @@ if __name__ == "__main__":
   #Default parameters
   neg = int(0)
   pos = int(1)
+  n = 50
   SCORE = 'f1'    #Scoring method for RF, default F-measure, can change to AUC-ROC using -score roc_auc
   FEAT = 'all'    #Features to include from dataframe. Default = all (i.e. don't remove any from the given dataframe)
   
@@ -167,6 +175,8 @@ if __name__ == "__main__":
           neg = sys.argv[i+1]
         if sys.argv[i] == "-pos":
           pos = sys.argv[i+1]
+        if sys.argv[i] == "-n":
+          n = int(sys.argv[i+1])
 
-  RandomForest(DF, SAVE, SCORE, FEAT, pos, neg)
+  RandomForest(DF, SAVE, SCORE, FEAT, pos, neg, n)
 
