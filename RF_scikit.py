@@ -69,7 +69,7 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg, n):
   m = 0 
   num_df = n        #Number of random balanced replicates (Rand_df_reps)
   num_rep = 10       #Number of CV replicates (cv_reps)
-  num_cv = 5        #Cross validation fold
+  num_cv = 10        #Cross validation fold
 
   #Make empty array to save score from each random balanced replicate. Size = num_df
   Rand_df_reps = np.array([])
@@ -107,13 +107,13 @@ def RandomForest(DF, SAVE, SCORE, FEAT, pos, neg, n):
       # Make classification using cross validation
       scores = cross_validation.cross_val_score(forest, x, y=y, cv=kf_total, scoring = SCORE)     #Make predictions with CV
       cv_reps = np.insert(cv_reps, 0, scores.mean())
-      print(scores)
-      print(scores.mean())
-      
+      #print(scores)
+      #print(scores.mean())
+
 
       #To get the predicted class of the imput sample from CV model (ie. highest mean probability estimate across trees)
-      pred = cross_validation.cross_val_predict(forest, x, y=y, cv=num_cv)
-      print("CV prediction: %s" % pred)
+      #pred = cross_validation.cross_val_predict(forest, x, y=y, cv=num_cv)
+      #print("CV prediction: %s" % pred)
       
       #Add importance values to imp array
       importances = forest.feature_importances_
@@ -177,6 +177,10 @@ if __name__ == "__main__":
           pos = sys.argv[i+1]
         if sys.argv[i] == "-n":
           n = int(sys.argv[i+1])
+
+  if len(sys.argv) <= 1:
+    print(__doc__)
+    exit()
 
   RandomForest(DF, SAVE, SCORE, FEAT, pos, neg, n)
 
