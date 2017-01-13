@@ -45,7 +45,7 @@ def GridSearch_RF(df, SAVE):
   # Set parameters to sweep in grid search
   n_estimators_list = [10, 50, 100, 500]
   max_depth_list = [2, 3, 5, 10, 20, 50, 100]
-  max_features_list = [0.1, 0.25, 0.5, 0.75, .99, 'sqrt', 'log2']
+  max_features_list = [0.1, 0.25, 0.5, 0.75, .99999, 'sqrt', 'log2']  # Using .99999 instead of "None (i.e. all)" because None causes problems downstream.
   criterion_list = ['gini', 'entropy']
   
   for (n_estimators, max_depth, max_features, criterion) in itertools.product(n_estimators_list, max_depth_list, max_features_list, criterion_list):
@@ -85,7 +85,7 @@ def GridSearch_LinearSVC(df, SAVE):
   # Set parameters to sweep in grid search
   C_list = [0.01, 0.1, 0.5, 1, 10, 50, 100]
   loss_list = ['hinge', 'squared_hinge']
-  max_iter_list=[10, 100,1000]
+  max_iter_list=[10,100,1000]
   
   for (C, loss, max_iter) in itertools.product(C_list, loss_list, max_iter_list):
     accuracy_l = np.array([])
@@ -121,7 +121,7 @@ def RandomForest(df, n_estimators, max_depth, max_features, criterion):
   from sklearn.metrics import accuracy_score, f1_score
 
   y = df['Class']   
-  x = df.drop(['Class'], axis=1)  
+  x = df.drop(['Class'], axis=1) 
   
   try:
     max_depth = int(max_depth)
@@ -143,7 +143,7 @@ def RandomForest(df, n_estimators, max_depth, max_features, criterion):
   macro_f1 = f1_score(y, cv_predictions)
   
   importances = clf.feature_importances_
-  return accuracy, macro_f1, importances
+  return accuracy, macro_f1, importances, cv_predictions
 
 
 def LinearSVC(df, C, loss, max_iter):
@@ -169,10 +169,37 @@ def LinearSVC(df, C, loss, max_iter):
   return accuracy, macro_f1, importances
  
 
+def PR_Curve(y_pred, SAVE):
+  from sklearn.metrics import (precision_recall_curve, f1_score)
+  import matplotlib.pyplot as plt
+  plt.switch_backend('agg')
+
+  ypred_df = pd.DataFrame(y_pred[1:,:], columns=y_pred[0,:], dtype = float) 
+  y_pred_mean = ypred_df.mean(axis=0, numeric_only=True)
+
+  y_pred_round = np.round(y_pred_mean, decimals=0)
+
+  precision, recall, thresholds = precision_recall_curve(y_true, y_pred_round, pos_label=1)
+  
+  f1_summary = f1_score(y_true, y_pred_round)
+  plt.plot(recall, precision, color='navy', label='Precision-Recall curve')
+  plt.xlabel('Recall')
+  plt.ylabel('Precision')
+  plt.ylim([0.0, 1.05])
+  plt.xlim([0.0, 1.0])
+  plt.title('PR Curve: %s\nSummary F1 = %0.2f' % (SAVE, f1_summary))
+  plt.show()
+  # save a PDF file named for the CSV file (but in the current directory)
+  filename = SAVE + "_PRcurve.png"
+  plt.savefig(filename)
+
+
+
+
 if __name__ == "__main__":
     
   # Default code parameters
-  neg, pos, n, FEAT, SAVE, GS, ALG = int(0), int(1), 50, 'all', 'test', 'False', 'RF' 
+  neg, pos, n, FEAT, SAVE, GS, ALG, PR = int(0), int(1), 50, 'all', 'test', 'False', 'RF', "False"
 
   # Default Random Forest parameters
   n_estimators, max_depth, max_features, criterion = 500, 10, "sqrt", "gini"
@@ -197,6 +224,8 @@ if __name__ == "__main__":
           n = int(sys.argv[i+1])
         if sys.argv[i] == "-alg":
           ALG = sys.argv[i+1]
+        if sys.argv[i] == "-PR":
+          PR = sys.argv[i+1]
 
 
   if len(sys.argv) <= 1:
@@ -211,7 +240,7 @@ if __name__ == "__main__":
   else:
     df = DF
 
-
+  
   # If list of features to include in analysis given (-feat), filter out all other features
   if FEAT != 'all':
     with open(FEAT) as f:
@@ -245,6 +274,8 @@ if __name__ == "__main__":
 
   acc = np.array([])
   f1 = np.array([])
+  positives, negatives = np.ones(pos_size), np.zeros(pos_size)
+  y_pred = y_true = np.hstack((positives, negatives))
   imp_array = list(df.columns.values)[1:]
 
   for j in range(n):
@@ -254,14 +285,20 @@ if __name__ == "__main__":
     df = pd.DataFrame.merge(all_pos, random_neg, how = 'outer')   #Make balanced dataframe
       
     if ALG == "RF":
-      accuracy, macro_f1, importances = RandomForest(df, n_estimators, max_depth, max_features, criterion)
+      accuracy, macro_f1, importances, cv_predictions = RandomForest(df, n_estimators, max_depth, max_features, criterion)
     elif ALG == "SVC":
       accuracy, macro_f1, importances = LinearSVC(df, C, loss, max_iter)
     
     # Add accuracy, f1, and importance scores to results arrays
     acc = np.insert(acc, 0, accuracy)
     f1 = np.insert(f1, 0, macro_f1)
+    y_pred = np.vstack((y_pred, cv_predictions))
     imp_array = np.vstack((imp_array, importances))
+
+
+  # Make PR Curve (also code to ID which instances are being predicted)
+  if PR == "True" or PR == "T":
+    PR_Curve(y_pred, SAVE)
 
   # Calculate mean importance scores and sort
   imp_df = pd.DataFrame(imp_array[1:,:], columns=imp_array[0,:], dtype = float)  
@@ -269,6 +306,9 @@ if __name__ == "__main__":
   imp_mean_df = imp_mean_df.sort_values('importance', 0, ascending = False)
   print("Top five most important features:")
   print(imp_mean_df.head(5))
+  imp_out = SAVE + "_imp"
+  imp_mean_df.to_csv(imp_out, sep = "\t", index=True)
+
   imp_out = SAVE + "_imp"
   imp_mean_df.to_csv(imp_out, sep = "\t", index=True)
 
