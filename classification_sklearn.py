@@ -33,89 +33,90 @@ import sys
 import pandas as pd
 import numpy as np
 from math import sqrt
+from sklearn.metrics import (precision_recall_curve, f1_score)
+import time
 
 
+def GridSearch_RF(df):
+  from sklearn.model_selection import GridSearchCV
+  from sklearn.ensemble import RandomForestClassifier
+  start_time = time.time()
 
-def GridSearch_RF(df, SAVE):
-  import itertools
-
-  #Make header array to save score from each random balanced replicate. Size = num_df
-  results = np.array(['n_estimators', 'max_depth', 'max_features', 'criterion', 'accuracy', 'macro_f1'])
+  parameters = {'n_estimators':(50, 100, 500), 'max_depth':(2, 3, 5, 10, 50, 100), 'max_features': (0.1, 0.25, 0.5, 0.75, 0.9999, 'sqrt', 'log2')}
+  #parameters = {'n_estimators':(10, 50), 'max_depth':(2, 5), 'max_features': (0.1, 0.5)}
   
-  # Set parameters to sweep in grid search
-  n_estimators_list = [10, 50, 100, 500]
-  max_depth_list = [2, 3, 5, 10, 20, 50, 100]
-  max_features_list = [0.1, 0.25, 0.5, 0.75, .99999, 'sqrt', 'log2']  # Using .99999 instead of "None (i.e. all)" because None causes problems downstream.
-  criterion_list = ['gini', 'entropy']
-  
-  for (n_estimators, max_depth, max_features, criterion) in itertools.product(n_estimators_list, max_depth_list, max_features_list, criterion_list):
-    accuracy_l = np.array([])
-    macro_f1_l = np.array([])
-
-    for j in range(10):
-        
-      #Make balanced dataset with random negative examples drawn
-      random_neg = all_neg.sample(n=pos_size, random_state = j)     #take random subset of negative examples - same size as positive
-      df = pd.DataFrame.merge(all_pos, random_neg, how = 'outer')   #Make balanced dataframe
-
-      accuracy, macro_f1, importances = RandomForest(df, n_estimators, max_depth, max_features, criterion)
-
-      # Add accuracy and f1 to results arrays
-      accuracy_l = np.insert(accuracy_l, 0, accuracy)
-      macro_f1_l = np.insert(macro_f1_l, 0, macro_f1) 
-
-    new_row = [n_estimators, max_depth, max_features, criterion, np.mean(accuracy), float(np.mean(macro_f1))]
-    results = np.vstack([results, new_row])
-
-  r = pd.DataFrame(results[1:,:], columns = results[0,:])
-  r = r.sort_values(['macro_f1','accuracy'], 0, ascending = [False, False])
-  print("Top runs from the parameter sweep:")
-  print(r.head(5))
-  outName = SAVE + "_GridSearch"
-  r.to_csv(outName, sep = "\t", index=False)
-
-  return r['n_estimators'].iloc[0], r['max_depth'].iloc[0], r['max_features'].iloc[0], r['criterion'].iloc[0]
+  for j in range(10):
+    # Build random balanced dataset and define x & y
+    random_neg = all_neg.sample(n=pos_size, random_state = j)     #take random subset of negative examples - same size as positive
+    df = pd.DataFrame.merge(all_pos, random_neg, how = 'outer')   #Make balanced dataframe
     
-def GridSearch_LinearSVC(df, SAVE):
-  import itertools
+    y = df['Class']   
+    x = df.drop(['Class'], axis=1) 
 
-  #Make header array to save score from each random balanced replicate. Size = num_df
-  results = np.array(['C', 'loss', 'max_iter', 'accuracy', 'macro_f1'])
+    # Build model, run grid search with 10-fold cross validation and fit
+    rf = RandomForestClassifier()
+    clf = GridSearchCV(rf, parameters, cv = 10, n_jobs = n_jobs, pre_dispatch=2*n_jobs)
+    clf.fit(x, y)
+    j_results = pd.DataFrame(clf.cv_results_)
+    
+    if j == 0:
+      results = j_results[['param_max_depth', 'param_max_features', 'param_n_estimators','mean_test_score']]
+    else:
+      results_temp = j_results[['param_max_depth', 'param_max_features', 'param_n_estimators','mean_test_score']]
+      results = pd.merge(results, results_temp, on=['param_max_depth', 'param_max_features', 'param_n_estimators'])
   
-  # Set parameters to sweep in grid search
-  C_list = [0.01, 0.1, 0.5, 1, 10, 50, 100]
-  loss_list = ['hinge', 'squared_hinge']
-  max_iter_list=[10,100,1000]
-  
-  for (C, loss, max_iter) in itertools.product(C_list, loss_list, max_iter_list):
-    accuracy_l = np.array([])
-    macro_f1_l = np.array([])
+  # Calculate average test score and sort
+  col_list= [col for col in results.columns if 'mean_test_score' in col]
+  results['average_mean_test_score'] = results[col_list].mean(axis=1)
+  results = results.sort_values(['average_mean_test_score'], 0, ascending = False)
 
-    for j in range(10):
-        
-      #Make balanced dataset with random negative examples drawn
-      random_neg = all_neg.sample(n=pos_size, random_state = j)     #take random subset of negative examples - same size as positive
-      df = pd.DataFrame.merge(all_pos, random_neg, how = 'outer')   #Make balanced dataframe
-      
-      accuracy, macro_f1, importances = LinearSVC(df, C, loss, max_iter)
-      
-      # Add accuracy and f1 to results arrays
-      accuracy_l = np.insert(accuracy_l, 0, accuracy)
-      macro_f1_l = np.insert(macro_f1_l, 0, macro_f1) 
-
-    new_row = [C, loss, max_iter, np.mean(accuracy), np.mean(macro_f1)]
-    results = np.vstack([results, new_row])
-
-  r = pd.DataFrame(results[1:,:], columns = results[0,:])
-  r = r.sort_values(['accuracy', 'macro_f1'], 0, ascending = [False, False])
-  print("Top runs from the parameter sweep:")
-  print(r.head(5))
+  print("Parameter sweep time: %f seconds" % (time.time() - start_time))
   outName = SAVE + "_GridSearch"
-  r.to_csv(outName, sep = "\t", index=False)
+  results.to_csv(outName, sep = "\t", index=False, columns = ['param_max_depth', 'param_max_features', 'param_n_estimators', 'average_mean_test_score'])
 
-  return r['C'].iloc[0], r['loss'].iloc[0], r['max_iter'].iloc[0]
+  return results['param_n_estimators'].iloc[0], results['param_max_depth'].iloc[0], results['param_max_features'].iloc[0]
 
-def RandomForest(df, n_estimators, max_depth, max_features, criterion):
+
+def GridSearch_LinearSVC(df):
+  from sklearn.model_selection import GridSearchCV
+  from sklearn.svm import LinearSVC
+  start_time = time.time()
+
+  parameters = {'C':(0.01, 0.1, 0.5, 1, 10, 50, 100), 'loss':('hinge', 'squared_hinge'), 'max_iter':(10,100,1000)}
+  
+  for j in range(20):
+    # Build random balanced dataset and define x & y
+    random_neg = all_neg.sample(n=pos_size, random_state = j)     #take random subset of negative examples - same size as positive
+    df = pd.DataFrame.merge(all_pos, random_neg, how = 'outer')   #Make balanced dataframe
+    
+    y = df['Class']   
+    x = df.drop(['Class'], axis=1) 
+
+    # Build model, run grid search with 10-fold cross validation and fit
+    svc = LinearSVC()
+    clf = GridSearchCV(svc, parameters, cv = 10, n_jobs = 100)
+    clf.fit(x, y)
+    j_results = pd.DataFrame(clf.cv_results_)
+    
+    if j == 0:
+      results = j_results[['param_C', 'param_loss', 'param_max_iter','mean_test_score']]
+    else:
+      results_temp = j_results[['param_C', 'param_loss', 'param_max_iter','mean_test_score']]
+      results = pd.merge(results, results_temp, on=['param_C', 'param_loss', 'param_max_iter'])
+  
+  # Calculate average test score and sort
+  col_list= [col for col in results.columns if 'mean_test_score' in col]
+  results['average_mean_test_score'] = results[col_list].mean(axis=1)
+  results = results.sort_values(['average_mean_test_score'], 0, ascending = False)
+
+  print("Parameter sweep time: %f seconds" % (time.time() - start_time))
+  outName = SAVE + "_GridSearch"
+  results.to_csv(outName, sep = "\t", index=False, columns = ['param_C', 'param_loss', 'param_max_iter', 'average_mean_test_score'])
+
+  return results['param_C'].iloc[0], results['param_loss'].iloc[0], results['param_max_iter'].iloc[0]
+
+
+def RandomForest(df, n_estimators, max_depth, max_features, criterion, n_jobs):
   from sklearn.ensemble import RandomForestClassifier
   from sklearn.model_selection import cross_val_predict
   from sklearn.metrics import accuracy_score, f1_score
@@ -123,30 +124,23 @@ def RandomForest(df, n_estimators, max_depth, max_features, criterion):
   y = df['Class']   
   x = df.drop(['Class'], axis=1) 
   
-  try:
-    max_depth = int(max_depth)
-  except:
-    pass
-  try:
-    max_features = float(max_features)
-  except:
-    pass
-  
   #Define the model
-  clf = RandomForestClassifier(n_estimators=int(n_estimators), max_depth=max_depth, max_features=max_features, criterion=criterion)
+  clf = RandomForestClassifier(n_estimators=int(n_estimators), max_depth=max_depth, max_features=max_features, criterion=criterion, n_jobs=n_jobs)
   clf = clf.fit(x, y)
+  
   #Obtain the predictions using 10 fold cross validation (uses KFold cv by default):
   cv_predictions = cross_val_predict(estimator=clf, X=x, y=y, cv=10)
+  #probability_pos_clf = clf.predict_proba()
 
   # Calculate the accuracy score and f1_score & add to 
   accuracy = accuracy_score(y, cv_predictions)
   macro_f1 = f1_score(y, cv_predictions)
   
   importances = clf.feature_importances_
-  return accuracy, macro_f1, importances, cv_predictions
+  return accuracy, macro_f1, importances #, cv_predictions
 
 
-def LinearSVC(df, C, loss, max_iter):
+def LinearSVC(df, C, loss, max_iter, n_jobs):
   from sklearn.svm import LinearSVC
   from sklearn.model_selection import cross_val_predict
   from sklearn.metrics import accuracy_score, f1_score
@@ -159,7 +153,7 @@ def LinearSVC(df, C, loss, max_iter):
   clf = clf.fit(x, y)
 
   #Obtain the predictions using 10 fold cross validation (uses KFold cv by default):
-  cv_predictions = cross_val_predict(estimator=clf, X=x, y=y, cv=10)
+  cv_predictions = cross_val_predict(estimator=clf, X=x, y=y, cv=10, n_jobs = n_jobs)
 
   # Calculate the accuracy score and f1_score & add to 
   accuracy = accuracy_score(y, cv_predictions)
@@ -170,16 +164,9 @@ def LinearSVC(df, C, loss, max_iter):
  
 
 def PR_Curve(y_pred, SAVE):
-  from sklearn.metrics import (precision_recall_curve, f1_score)
   import matplotlib.pyplot as plt
   plt.switch_backend('agg')
 
-  ypred_df = pd.DataFrame(y_pred[1:,:], columns=y_pred[0,:], dtype = float) 
-  y_pred_mean = ypred_df.mean(axis=0, numeric_only=True)
-
-  y_pred_round = np.round(y_pred_mean, decimals=0)
-
-  precision, recall, thresholds = precision_recall_curve(y_true, y_pred_round, pos_label=1)
   
   f1_summary = f1_score(y_true, y_pred_round)
   plt.plot(recall, precision, color='navy', label='Precision-Recall curve')
@@ -195,11 +182,10 @@ def PR_Curve(y_pred, SAVE):
 
 
 
-
 if __name__ == "__main__":
     
   # Default code parameters
-  neg, pos, n, FEAT, SAVE, GS, ALG, PR = int(0), int(1), 50, 'all', 'test', 'False', 'RF', "False"
+  neg, pos, n, FEAT, SAVE, GS, ALG, PR, n_jobs = int(0), int(1), 50, 'all', 'test', 'False', 'RF', "False", 100
 
   # Default Random Forest parameters
   n_estimators, max_depth, max_features, criterion = 500, 10, "sqrt", "gini"
@@ -224,8 +210,12 @@ if __name__ == "__main__":
           n = int(sys.argv[i+1])
         if sys.argv[i] == "-alg":
           ALG = sys.argv[i+1]
+        if sys.argv[i] == "-criterion":
+          criterion = sys.argv[i+1]
         if sys.argv[i] == "-PR":
           PR = sys.argv[i+1]
+        if sys.argv[i] == "-n_jobs":
+          n_jobs = int(sys.argv[i+1])
 
 
   if len(sys.argv) <= 1:
@@ -259,19 +249,21 @@ if __name__ == "__main__":
   all_neg = df[df.Class == 0]
   print("%d positive examples and %d negative examples in dataframe" % (pos_size, all_neg.shape[0]))
 
-
+  SAVE = SAVE + "_" + ALG
 
   ####### Run parameter sweep using a grid search #######
   if GS == 'True' or GS == 'T' or GS == 'y' or GS == 'yes':
     imp = "False"
     if ALG == "RF":
-      n_estimators, max_depth, max_features, criterion = GridSearch_RF(df, SAVE)
+      n_estimators, max_depth, max_features = GridSearch_RF(df)
+      print("Parameters selected: n_estimators=%s, max_depth=%s, max_features=%s" % (str(n_estimators), str(max_depth), str(max_features)))
     elif ALG == "SVC":
-      C, loss, max_iter = GridSearch_LinearSVC(df, SAVE)
+      C, loss, max_iter = GridSearch_LinearSVC(df)
+      print("Parameters selected: C=%s, loss=%s, max_iter=%s" % (str(C), str(loss), str(max_iter)))
 
 
   ####### ML Pipeline #######
-
+  start_time = time.time()
   acc = np.array([])
   f1 = np.array([])
   positives, negatives = np.ones(pos_size), np.zeros(pos_size)
@@ -283,20 +275,26 @@ if __name__ == "__main__":
     #Make balanced dataset with random negative examples drawn
     random_neg = all_neg.sample(n=pos_size, random_state = j)     #take random subset of negative examples - same size as positive
     df = pd.DataFrame.merge(all_pos, random_neg, how = 'outer')   #Make balanced dataframe
-      
+
     if ALG == "RF":
-      accuracy, macro_f1, importances, cv_predictions = RandomForest(df, n_estimators, max_depth, max_features, criterion)
+      accuracy, macro_f1, importances = RandomForest(df, n_estimators, max_depth, max_features, criterion, n_jobs)
     elif ALG == "SVC":
-      accuracy, macro_f1, importances = LinearSVC(df, C, loss, max_iter)
-    
+      accuracy, macro_f1, importances = LinearSVC(df, C, loss, max_iter, n_jobs)
+  
+    # Calculate precision and recall for the run
+    #precision, recall, thresholds = precision_recall_curve(y_true, cv_predictions, pos_label=1)
+    #print(precision, recall, thresholds)
+
     # Add accuracy, f1, and importance scores to results arrays
     acc = np.insert(acc, 0, accuracy)
     f1 = np.insert(f1, 0, macro_f1)
-    y_pred = np.vstack((y_pred, cv_predictions))
     imp_array = np.vstack((imp_array, importances))
-
-
+      
+    
+    #y_pred = np.vstack((y_pred, cv_predictions))
   # Make PR Curve (also code to ID which instances are being predicted)
+  print("ML Pipeline time: %f seconds" % (time.time() - start_time))
+
   if PR == "True" or PR == "T":
     PR_Curve(y_pred, SAVE)
 
@@ -306,9 +304,7 @@ if __name__ == "__main__":
   imp_mean_df = imp_mean_df.sort_values('importance', 0, ascending = False)
   print("Top five most important features:")
   print(imp_mean_df.head(5))
-  imp_out = SAVE + "_imp"
-  imp_mean_df.to_csv(imp_out, sep = "\t", index=True)
-
+  
   imp_out = SAVE + "_imp"
   imp_mean_df.to_csv(imp_out, sep = "\t", index=True)
 
